@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mes Commandes - Amirat Modestie</title>
+    <!-- Polices Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <style>
+        /* Réutilisation et adaptation des styles d'admin.html et index.html */
+        :root {
+            --primary-color: #6a4f6b;
+            --secondary-color: #a78b9f;
+            --background-color: #f8f9fa;
+            --text-color: #343a40;
+            --border-color: #dee2e6;
+            --card-bg: #ffffff;
+            --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            --border-radius: 8px;
+            --list-hover-bg: #e9ecef;
+        }
+
+        body {
+            font-family: 'Lato', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        h1, h2 {
+            font-family: 'Poppins', sans-serif;
+            color: var(--primary-color);
+            text-align: center;
+        }
+        h1 {
+           font-size: 1.8em;
+           margin-bottom: 15px;
+           font-weight: 600;
+        }
+         h2 {
+             font-size: 1.4em;
+             margin-top: 30px;
+             margin-bottom: 20px;
+             text-align: left;
+             font-weight: 500;
+             border-bottom: 1px solid var(--secondary-color);
+             padding-bottom: 8px;
+         }
+
+        /* Styles pour le formulaire de connexion (repris d'admin.html) */
+        #login-section {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            max-width: 400px;
+            margin: 40px auto;
+        }
+        #login-section h2 {
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 25px;
+            border-bottom: none;
+        }
+        #login-form .form-group {
+            margin-bottom: 15px;
+        }
+        #login-form label {
+             display: block;
+             margin-bottom: 5px;
+             font-weight: 500;
+             color: #555;
+             font-size: 0.9em;
+        }
+        #login-form input[type="email"],
+        #login-form input[type="password"] {
+             width: 100%;
+             padding: 10px 12px;
+             border: 1px solid var(--border-color);
+             border-radius: 5px;
+             box-sizing: border-box;
+             font-size: 1em;
+             font-family: 'Poppins', sans-serif;
+        }
+        #login-error {
+            color: #dc3545;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.9em;
+            min-height: 1.2em;
+        }
+        #login-button {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        /* Bouton */
+         .button {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 1em;
+            font-weight: 500;
+            font-family: 'Poppins', sans-serif;
+            color: #ffffff;
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
+            text-decoration: none;
+            margin-top: 15px;
+            margin-right: 10px;
+        }
+        .button:hover {
+            background-color: var(--secondary-color);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .button-secondary {
+            background-color: #6c757d;
+        }
+         .button-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        /* Bouton Déconnexion (repris d'admin.html) */
+         #logout-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            font-size: 0.8em;
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 1px solid var(--border-color);
+            opacity: 0.7;
+            transition: opacity 0.2s ease, background-color 0.2s ease;
+             border-radius: 5px;
+             cursor: pointer;
+        }
+        #logout-button:hover {
+            opacity: 1;
+            background-color: #f8f9fa;
+        }
+
+        /* Styles pour la LISTE des commandes (repris d'admin.html) */
+        #my-orders-list {
+             /* Styles si nécessaire pour le conteneur */
+        }
+        .order-list-item {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            box-shadow: var(--card-shadow);
+            /* Pas de curseur pointeur ici par défaut */
+        }
+         .order-list-item div {
+            margin: 5px 0;
+        }
+         .order-list-header {
+             display: flex;
+             justify-content: space-between;
+             align-items: flex-start;
+             margin-bottom: 10px;
+             padding-bottom: 10px;
+             border-bottom: 1px dashed var(--border-color);
+         }
+        .order-date {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        .order-status {
+            font-weight: 600;
+            font-size: 0.95em;
+            padding: 3px 8px;
+            border-radius: 4px;
+            /* Styles spécifiques par statut pourraient être ajoutés en JS */
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        .order-details p {
+            margin: 5px 0;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+         .order-details strong {
+             color: var(--text-color);
+             min-width: 120px;
+             display: inline-block;
+        }
+
+        /* Messages chargement/erreur */
+        #loading-message, #error-message, #no-orders-message {
+            text-align: center;
+            margin: 40px auto;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            font-size: 1em;
+            max-width: 500px;
+        }
+        #loading-message {
+             color: var(--text-color);
+             background-color: #e9ecef;
+        }
+        #error-message {
+            color: #721c24;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            font-weight: bold;
+        }
+        #no-orders-message {
+            color: var(--text-light);
+            background-color: #f9f9f9;
+        }
+
+        /* Classe helper pour cacher */
+        .hidden {
+            display: none !important;
+        }
+         /* Logo */
+        .logo-container {
+          text-align: center;
+          margin-bottom: 20px;
+        }
+        .logo-container img {
+          max-width: 120px;
+          height: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+
+        <div class="logo-container">
+            <img src="https://i.ibb.co/ymD4j0Y5/d64d95d9-3237-444f-b385-ccf91a50afec-removebg-preview.png" alt="Logo Amirat Modestie">
+       </div>
+
+        <!-- Bouton de déconnexion (caché initialement) -->
+        <button id="logout-button" class="button-secondary hidden">Déconnexion</button>
+
+        <h1>Mes Commandes</h1>
+
+        <!-- Section de connexion (visible si non connecté) -->
+        <div id="login-section">
+            <h2>Connectez-vous pour voir vos commandes</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-email">Email :</label>
+                    <input type="email" id="login-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Mot de passe :</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <button type="submit" id="login-button" class="button">Se connecter</button>
+                <p id="login-error"></p>
+            </form>
+        </div>
+
+        <!-- Section Mes Commandes (visible si connecté) -->
+        <div id="orders-section" class="hidden">
+            <h2 id="orders-title">Vos commandes récentes</h2>
+
+            <p id="loading-message" class="hidden">Chargement de vos commandes...</p>
+            <p id="error-message" class="hidden"></p>
+            <p id="no-orders-message" class="hidden">Vous n'avez pas encore passé de commande avec ce compte.</p>
+
+            <div id="my-orders-list">
+                <!-- Les commandes seront ajoutées ici -->
+            </div>
+        </div>
+
+    </div> <!-- Fin container -->
+
+    <script>
+        // --- Initialisation Firebase ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyD8JFpOoAYcOdavqDkLnzDqjFxRl8P_RE0",
+            authDomain: "amirat-3a58d.firebaseapp.com",
+            projectId: "amirat-3a58d",
+            storageBucket: "amirat-3a58d.firebasestorage.app",
+            messagingSenderId: "307977965766",
+            appId: "1:307977965766:web:c670f287860646de4087c7",
+            measurementId: "G-6WPLCESCRX"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // --- Références DOM ---
+        const loginSection = document.getElementById('login-section');
+        const loginForm = document.getElementById('login-form');
+        const loginEmailInput = document.getElementById('login-email');
+        const loginPasswordInput = document.getElementById('login-password');
+        const loginError = document.getElementById('login-error');
+        const ordersSection = document.getElementById('orders-section');
+        const ordersTitle = document.getElementById('orders-title');
+        const myOrdersListDiv = document.getElementById('my-orders-list');
+        const loadingMessage = document.getElementById('loading-message');
+        const errorMessage = document.getElementById('error-message');
+        const noOrdersMessage = document.getElementById('no-orders-message');
+        const logoutButton = document.getElementById('logout-button');
+
+        // --- Fonctions --- //
+
+        // Fonction pour afficher les commandes de l'utilisateur connecté
+        async function fetchMyOrders(userId) {
+            loadingMessage.classList.remove('hidden');
+            errorMessage.classList.add('hidden');
+            noOrdersMessage.classList.add('hidden');
+            myOrdersListDiv.innerHTML = '';
+
+            try {
+                const commandesSnapshot = await db.collection("commandes")
+                                                .where("userId", "==", userId) // Filtrer par userId
+                                                .orderBy("dateCommande", "desc")
+                                                .get();
+
+                if (commandesSnapshot.empty) {
+                    noOrdersMessage.classList.remove('hidden');
+                } else {
+                    commandesSnapshot.forEach(doc => {
+                        const commande = doc.data();
+                        const commandeId = doc.id;
+
+                        // Formater la date
+                        let formattedDate = 'Date inconnue';
+                        if (commande.dateCommande && commande.dateCommande.toDate) {
+                            try {
+                                formattedDate = commande.dateCommande.toDate().toLocaleDateString('fr-FR', {
+                                    day: '2-digit', month: 'long', year: 'numeric'
+                                });
+                            } catch (e) { console.warn("Date commande invalide:", commande.dateCommande); }
+                        }
+
+                         // Helper pour afficher '-' si vide
+                        const getText = (value) => value || '-';
+                        const formatPrice = (value, currency = 'EUR') => typeof value === 'number' ? value.toFixed(2) + ' ' + currency : '-';
+
+                        const orderItem = document.createElement('div');
+                        orderItem.classList.add('order-list-item');
+                        orderItem.innerHTML = `
+                            <div class="order-list-header">
+                                <span class="order-date">Commande du ${formattedDate}</span>
+                                <span class="order-status">${getText(commande.statutPaiementPayPal)}</span>
+                            </div>
+                            <div class="order-details">
+                                <p><strong>Réf. Article:</strong> ${getText(commande.referenceArticle)}</p>
+                                <p><strong>Montant Total:</strong> ${formatPrice(commande.montantTotalPaye, commande.devise)}</p>
+                                <p><strong>Livraison:</strong> ${getText(commande.modeLivraison)} (${formatPrice(commande.fraisLivraison, commande.devise)})</p>
+                                <p><strong>ID Transaction:</strong> ${getText(commande.paypalTransactionId)}</p>
+                                <p><strong>Destinataire:</strong> ${getText(commande.prenom)} ${getText(commande.nom)}</p>
+                                <!-- On peut ajouter l'adresse si besoin -->
+                            </div>
+                        `;
+                        myOrdersListDiv.appendChild(orderItem);
+                    });
+                }
+
+            } catch (error) {
+                console.error("Erreur lors de la récupération de mes commandes: ", error);
+                // Vérifier si l'erreur est due aux règles Firestore
+                if (error.code === 'permission-denied') {
+                     errorMessage.textContent = "Erreur d'accès. Vérifiez les règles Firestore pour autoriser la lecture des commandes par utilisateur.";
+                } else {
+                    errorMessage.textContent = "Impossible de charger vos commandes. Veuillez réessayer plus tard.";
+                }
+                errorMessage.classList.remove('hidden');
+            }
+            loadingMessage.classList.add('hidden');
+        }
+
+        // --- Logique d'Authentification --- //
+
+        // Gestion de la soumission du formulaire de connexion
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = loginEmailInput.value;
+            const password = loginPasswordInput.value;
+            loginError.textContent = '';
+
+            auth.signInWithEmailAndPassword(email, password)
+                .catch((error) => {
+                    console.error("Erreur connexion:", error);
+                    loginError.textContent = "Email ou mot de passe incorrect.";
+                });
+            // onAuthStateChanged s'occupera de la suite
+        });
+
+        // Gestion de la déconnexion
+        logoutButton.addEventListener('click', () => {
+            auth.signOut();
+        });
+
+        // Écouteur principal
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // Utilisateur connecté
+                console.log("Client connecté sur mes-commandes:", user.email);
+                loginSection.classList.add('hidden');
+                ordersSection.classList.remove('hidden');
+                logoutButton.classList.remove('hidden');
+                ordersTitle.textContent = `Vos commandes (${user.email})`;
+                fetchMyOrders(user.uid); // Charger les commandes de cet utilisateur
+            } else {
+                // Utilisateur déconnecté
+                console.log("Client déconnecté sur mes-commandes");
+                loginSection.classList.remove('hidden');
+                ordersSection.classList.add('hidden');
+                logoutButton.classList.add('hidden');
+                myOrdersListDiv.innerHTML = ''; // Vider la liste
+                 // Optionnel : vider les champs login
+                 loginEmailInput.value = '';
+                 loginPasswordInput.value = '';
+                 loginError.textContent = '';
+            }
+        });
+
+    </script>
+
+</body>
+</html> 

@@ -1,0 +1,2027 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Commandes Amirat Modestie</title>
+    <!-- Polices Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <!-- Optionnel: Firebase Auth (pour la connexion future) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <style>
+        /* ===== Variables CSS (Optionnel mais pratique) ===== */
+        :root {
+            --primary-color: #6a4f6b; /* Un mauve un peu plus profond */
+            --secondary-color: #a78b9f; /* Mauve doux existant */
+            --background-color: #f8f9fa; /* Un gris très clair */
+            --text-color: #343a40; /* Un gris foncé pour le texte */
+            --link-color: #5e3a5f;
+            --border-color: #dee2e6;
+            --card-bg: #ffffff;
+            --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            --border-radius: 8px;
+            --list-hover-bg: #e9ecef;
+            --button-secondary-bg: #6c757d; /* Gris pour les boutons secondaires */
+            --button-secondary-text: #ffffff; /* Texte blanc pour les boutons secondaires */
+        }
+
+        body {
+            font-family: 'Lato', sans-serif; /* Police plus neutre pour le corps */
+            margin: 0; /* Supprimer marge par défaut */
+            padding: 20px; /* Ajouter du padding global */
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        h1, h2 {
+            font-family: 'Poppins', sans-serif; /* Police d'accent pour les titres */
+            color: var(--primary-color);
+            text-align: center;
+        }
+        h1 {
+           font-size: 1.8em;
+           margin-bottom: 30px;
+           font-weight: 600;
+        }
+        h2 {
+             font-size: 1.4em;
+             margin-top: 40px;
+             margin-bottom: 20px;
+             text-align: left; /* Aligner à gauche pour la section */
+             font-weight: 500;
+             border-bottom: 1px solid var(--secondary-color); /* Souligner le titre de section */
+             padding-bottom: 5px;
+        }
+
+        /* Conteneur principal pour centrer et limiter la largeur sur grand écran */
+        .container {
+            max-width: 1400px; /* Max largeur pour le contenu */
+            margin: 0 auto; /* Centrer */
+            padding: 0 15px; /* Padding horizontal interne */
+        }
+
+        /* Styles pour le tableau */
+        .table-container {
+            overflow-x: auto; /* Important pour mobile */
+            background-color: #ffffff;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-top: 20px;
+        }
+
+        #orders-table {
+            width: 100%;
+            border-collapse: collapse; /* Assure que les bordures sont simples */
+            min-width: 1200px; /* Force une largeur minimale pour le défilement */
+        }
+        #orders-table th, #orders-table td {
+            border: 1px solid var(--table-border-color);
+            padding: 12px 15px; /* Padding un peu plus généreux */
+            text-align: left;
+            font-size: 0.9em;
+            vertical-align: middle; /* Aligner verticalement au milieu */
+            white-space: nowrap; /* Empêche le retour à la ligne */
+        }
+        #orders-table th {
+            background-color: var(--table-header-bg);
+            color: var(--table-header-text);
+            font-weight: 600; /* Police plus grasse pour l'en-tête */
+            font-family: 'Poppins', sans-serif;
+            position: sticky; /* En-tête flottant (optionnel, peut être gourmand) */
+            top: 0; /* Nécessaire pour sticky */
+            z-index: 1; /* Pour être au-dessus du contenu */
+        }
+        #orders-table tbody tr:nth-child(even) {
+            background-color: #fdfdfe; /* Très léger gris pour lignes paires */
+        }
+        #orders-table tbody tr:hover {
+            background-color: var(--table-row-hover-bg);
+            cursor: pointer; /* Indique qu'on peut cliquer (pour futures actions) */
+        }
+
+        /* Style pour les messages */
+        #loading-message, #error-message {
+            text-align: center;
+            margin-top: 40px;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            font-size: 1em;
+        }
+        #loading-message {
+             color: var(--text-color);
+             background-color: #e9ecef;
+        }
+        #error-message {
+            color: #721c24; /* Rouge foncé */
+            background-color: #f8d7da; /* Fond rouge clair */
+            border: 1px solid #f5c6cb; /* Bordure rouge */
+            font-weight: bold;
+        }
+        /* Classe pour masquer */
+        .hidden {
+            display: none;
+        }
+
+        /* Styles pour la LISTE des commandes */
+        #orders-list-container {
+            /* Styles si nécessaire pour le conteneur de la liste */
+        }
+        .order-list-item {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap; /* Permet le retour à la ligne sur petit écran */
+        }
+        .order-list-item:hover {
+            background-color: var(--list-hover-bg);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+        }
+        .order-list-item div {
+            margin: 5px 0; /* Espacement vertical pour les infos */
+        }
+        .order-list-info {
+            font-size: 0.95em;
+            color: var(--text-color);
+        }
+        .order-list-id {
+            font-size: 0.8em;
+            color: #6c757d; /* Gris plus clair pour l'ID */
+            word-break: break-all; /* Pour couper les ID longs */
+            margin-top: 5px;
+        }
+         .order-list-amount {
+            font-weight: 600;
+            color: var(--primary-color);
+            font-size: 1.1em;
+            margin-left: 15px; /* Espace à droite */
+        }
+
+        /* Styles pour la VUE JOURNALIÈRE des commandes */
+        .daily-group {
+            margin-bottom: 25px;
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+        }
+        .daily-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: 'Poppins', sans-serif;
+            cursor: pointer;
+        }
+        .daily-date {
+            font-weight: 500;
+            font-size: 1.05em;
+        }
+        .daily-total {
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+        .daily-orders {
+            border-top: 1px solid var(--border-color);
+        }
+        .daily-orders .order-list-item {
+            border-radius: 0;
+            margin-bottom: 0;
+            border-left: none;
+            border-right: none;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .daily-orders .order-list-item:last-child {
+            border-bottom: none;
+        }
+        
+        /* Style pour les boutons de basculement de vue */
+        .view-toggle-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .view-toggle-container .button {
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
+        .active-view {
+            background-color: var(--primary-color);
+        }
+        
+        /* Style pour afficher/masquer la section des commandes par jour */
+        .daily-orders.collapsed {
+            display: none;
+        }
+
+        /* Styles pour la VUE DETAILLEE d'une commande */
+        #order-details-view {
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            margin-top: 20px;
+        }
+        .detail-section {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed var(--border-color);
+        }
+        .detail-section:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .detail-section h3 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.1em;
+            color: var(--secondary-color);
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+        .detail-item {
+            display: flex;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+        .detail-item strong {
+            flex-basis: 150px; /* Largeur fixe pour le label */
+            min-width: 150px; /* Assure la largeur minimale */
+            margin-right: 10px;
+            color: var(--text-color);
+            font-weight: 600;
+        }
+        .detail-item span {
+             flex-grow: 1;
+             color: #555;
+             word-break: break-word; /* Permet au texte long de passer à la ligne */
+        }
+
+        /* Boutons */
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 1em;
+            font-weight: 500;
+            font-family: 'Poppins', sans-serif;
+            color: #ffffff;
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
+            text-decoration: none;
+            margin-top: 15px;
+            margin-right: 10px;
+        }
+        .button:hover {
+            background-color: var(--secondary-color);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .button-secondary {
+            background-color: #6c757d; /* Gris */
+        }
+         .button-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        /* Style pour les messages */
+        #loading-message, #error-message {
+            text-align: center;
+            margin-top: 40px;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            font-size: 1em;
+        }
+        #loading-message {
+             color: var(--text-color);
+             background-color: #e9ecef;
+        }
+        #error-message {
+            color: #721c24; /* Rouge foncé */
+            background-color: #f8d7da; /* Fond rouge clair */
+            border: 1px solid #f5c6cb; /* Bordure rouge */
+            font-weight: bold;
+        }
+        /* Classe pour masquer */
+        .hidden {
+            display: none !important; /* Important pour forcer le masquage */
+        }
+
+        /* Styles pour l'impression */
+        @media print {
+            body {
+                padding: 0;
+                margin: 0;
+                background-color: #fff;
+                font-size: 10pt; /* Taille plus adaptée à l'impression */
+                color: #000;
+            }
+            .container {
+                max-width: 100%;
+                margin: 0;
+                padding: 10mm; /* Marges d'impression */
+                box-shadow: none;
+            }
+            h1, h2, #orders-list-container, #loading-message, #error-message, .print-hide {
+                display: none; /* Masquer les éléments non nécessaires */
+            }
+            #order-details-view {
+                display: block !important; /* S'assurer que les détails sont visibles */
+                box-shadow: none;
+                border: none;
+                padding: 0;
+                margin: 0;
+            }
+            .detail-section {
+                 border-bottom: 1px solid #ccc;
+                 padding-bottom: 10px;
+                 margin-bottom: 15px;
+                 page-break-inside: avoid; /* Essayer d'éviter les coupures dans une section */
+            }
+             .detail-item strong {
+                 flex-basis: 120px;
+                 min-width: 120px;
+            }
+             a {
+                 text-decoration: none;
+                 color: #000;
+            }
+        }
+
+        /* Styles pour le formulaire de connexion */
+        #login-section {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            max-width: 400px; /* Limiter la largeur */
+            margin: 40px auto; /* Centrer */
+        }
+        #login-section h2 {
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 25px;
+            border-bottom: none; /* Pas de bordure pour ce H2 */
+        }
+        #login-form .form-group {
+            margin-bottom: 15px;
+        }
+        #login-form label {
+            font-size: 0.9em;
+        }
+        #login-form input[type="email"],
+        #login-form input[type="password"] {
+             width: 100%;
+             padding: 10px 12px;
+             border: 1px solid var(--border-color);
+             border-radius: 5px;
+             box-sizing: border-box;
+             font-size: 1em;
+             font-family: 'Poppins', sans-serif;
+        }
+        #login-error {
+            color: #dc3545; /* Rouge erreur */
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.9em;
+            min-height: 1.2em; /* Pour éviter les sauts de layout */
+        }
+        #login-button {
+            width: 100%; /* Bouton pleine largeur */
+            margin-top: 10px;
+        }
+
+        /* Bouton Déconnexion */
+        #logout-button {
+            display: inline-block;
+            padding: 4px 8px;
+            font-size: 0.7em;
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.2s ease, background-color 0.2s ease;
+        }
+
+        #logout-button:hover {
+            opacity: 1;
+            background-color: rgba(106, 79, 107, 0.1); /* Teinte légère de la couleur primaire */
+            color: var(--primary-color);
+        }
+
+        /* Ajustements spécifiques pour les très petits écrans */
+        @media (max-width: 480px) {
+            #logout-button {
+                font-size: 0.65em;
+                padding: 3px 6px;
+            }
+        }
+
+        /* Styles pour la LISTE DES UTILISATEURS */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            padding: 20px;
+        }
+        #users-table-container table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #users-table-container th, #users-table-container td {
+            padding: 10px 15px;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+        #users-table-container tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        #users-table-container tbody tr:hover {
+            background-color: var(--list-hover-bg);
+        }
+        .has-account {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .no-account {
+            color: #dc3545;
+        }
+
+        /* Menu Hamburger */
+        .menu-hamburger {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 250px;
+            background-color: var(--primary-color);
+            color: white;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+            overflow-y: auto;
+        }
+        
+        .menu-hamburger.active {
+            transform: translateX(0);
+        }
+        
+        .menu-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+        
+        .menu-header img {
+            max-width: 100px;
+            height: auto;
+        }
+        
+        .menu-items {
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+        
+        .menu-items li {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .menu-items li:hover,
+        .menu-items li.active {
+            background-color: var(--secondary-color);
+        }
+        
+        .menu-toggle {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            width: 40px;
+            height: 40px;
+            background-color: var(--primary-color);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 1001;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .menu-toggle span,
+        .menu-toggle span:before,
+        .menu-toggle span:after {
+            position: absolute;
+            height: 3px;
+            width: 24px;
+            background-color: white;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+        
+        .menu-toggle span:before,
+        .menu-toggle span:after {
+            content: '';
+            display: block;
+        }
+        
+        .menu-toggle span:before {
+            top: -7px;
+        }
+        
+        .menu-toggle span:after {
+            bottom: -7px;
+        }
+        
+        .menu-toggle.active span {
+            background-color: transparent;
+        }
+        
+        .menu-toggle.active span:before {
+            transform: rotate(45deg);
+            top: 0;
+        }
+        
+        .menu-toggle.active span:after {
+            transform: rotate(-45deg);
+            bottom: 0;
+        }
+        
+        /* Contenu principal avec marge pour le menu */
+        .main-content {
+            transition: margin-left 0.3s ease;
+            min-height: calc(100vh - 40px);
+        }
+        
+        .main-content.menu-active {
+            margin-left: 250px;
+        }
+        
+        /* Pages du panel d'admin */
+        .admin-page {
+            display: none;
+        }
+        
+        .admin-page.active {
+            display: block;
+        }
+        
+        /* Ajustement pour le logo et les autres éléments */
+        .main-header {
+            position: relative;
+            padding-top: 60px;
+            text-align: center;
+        }
+        
+        /* Ajustements pour le responsive */
+        @media (max-width: 768px) {
+            .menu-hamburger {
+                width: 100%;
+            }
+            
+            .main-content.menu-active {
+                margin-left: 0;
+            }
+            
+            /* Styles pour les boutons sur mobile */
+            .button, button.button-secondary {
+                padding: 12px 15px; /* Boutons plus grands sur mobile pour faciliter le toucher */
+                font-size: 0.95em;
+                width: 100%; /* Pleine largeur sur petit écran */
+                margin-bottom: 5px;
+            }
+            
+            /* Ajustements pour les vues par jour */
+            .daily-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+                padding: 12px 15px;
+            }
+            
+            .daily-total {
+                align-self: flex-end;
+            }
+            
+            /* Ajustement pour les statistiques du tableau de bord */
+            .dashboard-stats {
+                gap: 15px;
+            }
+            
+            .stat-card {
+                flex: 1 1 100% !important; /* Forcer une disposition en colonne */
+            }
+            
+            /* Table des utilisateurs */
+            #users-table-container th, #users-table-container td {
+                padding: 8px;
+                font-size: 0.9em;
+            }
+            
+            /* Rendre l'input date plus grand pour faciliter la sélection */
+            input[type="date"] {
+                height: 44px;
+                font-size: 16px !important; /* Empêcher le zoom automatique sur iOS */
+            }
+            
+            .view-toggle-container .button {
+                flex: 1;
+                min-width: 130px;
+            }
+        }
+        
+        /* Ajustements spécifiques pour les très petits écrans */
+        @media (max-width: 480px) {
+            .container {
+                padding: 0 10px;
+            }
+            
+            h1 {
+                font-size: 1.5em;
+                margin-top: 40px; /* Réduit l'espace pour le bouton de déconnexion */
+            }
+            
+            h2 {
+                font-size: 1.3em;
+            }
+            
+            /* Réduire la taille du logo */
+            .logo-container img {
+                max-width: 100px;
+            }
+            
+            /* Ajuster la section des commandes */
+            .order-list-item {
+                padding: 10px;
+                font-size: 0.9em;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Menu Hamburger -->
+    <div class="menu-toggle hidden">
+        <span></span>
+    </div>
+    
+    <div class="menu-hamburger hidden">
+        <div class="menu-header">
+            <img src="https://i.ibb.co/ymD4j0Y5/d64d95d9-3237-444f-b385-ccf91a50afec-removebg-preview.png" alt="Logo Amirat Modestie">
+        </div>
+        <ul class="menu-items">
+            <li data-page="dashboard" class="active">Tableau de bord</li>
+            <li data-page="orders">Commandes</li>
+            <li data-page="users">Utilisateurs</li>
+            <li data-page="settings">Paramètres</li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="container">
+            <!-- Bouton de déconnexion plus compact -->
+            <div style="position: absolute; top: 10px; right: 10px; z-index: 1100;">
+                <button id="logout-button" class="print-hide">Déconnexion</button>
+            </div>
+
+            <div class="main-header">
+                <!-- Logo central -->
+                <div class="logo-container" style="margin-bottom: 20px;">
+                    <a href="admin.html" style="display: inline-block;">
+                        <img src="https://i.ibb.co/ymD4j0Y5/d64d95d9-3237-444f-b385-ccf91a50afec-removebg-preview.png" alt="Logo Amirat Modestie" style="max-width: 120px; height: auto; display: block;">
+                    </a>
+                </div>
+                
+                <h1 class="print-hide">Panel Admin - Amirat Modestie</h1>
+            </div>
+
+            <!-- Zone de connexion (Activée) -->
+            <div id="login-section">
+                <h2>Connexion Admin</h2>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="admin-email">Email :</label>
+                        <input type="email" id="admin-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="admin-password">Mot de passe :</label>
+                        <input type="password" id="admin-password" required>
+                    </div>
+                    <button type="submit" id="login-button" class="button">Se connecter</button>
+                    <p id="login-error"></p>
+                </form>
+            </div>
+
+            <!-- Page Tableau de bord (résumé) -->
+            <div id="dashboard-page" class="admin-page active">
+                <h2>Tableau de bord</h2>
+                <div class="dashboard-stats" style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 30px;">
+                    <div class="stat-card" style="flex: 1; min-width: 200px; background: var(--card-bg); border-radius: var(--border-radius); box-shadow: var(--card-shadow); padding: 20px; text-align: center;">
+                        <h3 style="color: var(--primary-color); margin-top: 0;">Total Commandes</h3>
+                        <p id="total-orders" style="font-size: 2.5em; font-weight: bold; color: var(--primary-color); margin: 10px 0;">0</p>
+                    </div>
+                    <div class="stat-card" style="flex: 1; min-width: 200px; background: var(--card-bg); border-radius: var(--border-radius); box-shadow: var(--card-shadow); padding: 20px; text-align: center;">
+                        <h3 style="color: var(--primary-color); margin-top: 0;">Total Clients</h3>
+                        <p id="total-customers" style="font-size: 2.5em; font-weight: bold; color: var(--primary-color); margin: 10px 0;">0</p>
+                    </div>
+                    <div class="stat-card" style="flex: 1; min-width: 200px; background: var(--card-bg); border-radius: var(--border-radius); box-shadow: var(--card-shadow); padding: 20px; text-align: center;">
+                        <h3 style="color: var(--primary-color); margin-top: 0;">Ventes Aujourd'hui</h3>
+                        <p id="today-sales" style="font-size: 2.5em; font-weight: bold; color: var(--primary-color); margin: 10px 0;">0€</p>
+                    </div>
+                </div>
+                
+                <h3 style="color: var(--primary-color); border-bottom: 1px solid var(--secondary-color); padding-bottom: 8px;">Dernières commandes</h3>
+                <p style="margin: 10px 0 15px 0; font-size: 0.9em; color: #666;">Cliquez sur une commande pour voir ses détails complets</p>
+                <div id="recent-orders" style="background: var(--card-bg); border-radius: var(--border-radius); box-shadow: var(--card-shadow); padding: 0;">
+                    <p style="padding: 20px; margin: 0;">Chargement...</p>
+                </div>
+            </div>
+
+            <!-- Page Commandes -->
+            <div id="orders-page" class="admin-page">
+                <!-- Section Liste des Commandes (Initialement cachée) -->
+                <div id="orders-list-container">
+                    <h2>Liste des Commandes</h2>
+                    
+                    <!-- Filtre de date pour les commandes -->
+                    <div class="date-filter" style="background: var(--card-bg); border-radius: var(--border-radius); box-shadow: var(--card-shadow); padding: 15px; margin-bottom: 20px;">
+                        <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1em; color: var(--primary-color);">Filtrer par date</h3>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 15px;">
+                            <!-- Sélecteur de date -->
+                            <div style="width: 100%;">
+                                <label for="date-filter" style="display: block; margin-bottom: 5px; font-size: 0.9em;">Sélectionner une date:</label>
+                                <input type="date" id="date-filter" style="padding: 10px; width: 100%; max-width: 250px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 16px;">
+                            </div>
+                            
+                            <!-- Boutons Appliquer/Réinitialiser -->
+                            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                <button id="apply-date-filter" class="button" style="margin-top: 0; min-width: 100px;">Appliquer</button>
+                                <button id="reset-date-filter" class="button button-secondary" style="margin-top: 0; min-width: 100px;">Réinitialiser</button>
+                                <button id="refresh-orders" class="button button-secondary" style="margin-top: 0; min-width: 100px;">
+                                    <span style="margin-right: 5px;">↻</span> Actualiser
+                                </button>
+                            </div>
+                            
+                            <!-- Boutons Navigation jours -->
+                            <div style="display: flex; flex-wrap: wrap; gap: 10px; width: 100%;">
+                                <button id="previous-day" class="button button-secondary" style="margin-top: 0; flex: 1; min-width: 120px;"><span style="margin-right: 5px;">&#8592;</span> Jour précédent</button>
+                                <button id="next-day" class="button button-secondary" style="margin-top: 0; flex: 1; min-width: 120px;">Jour suivant <span style="margin-left: 5px;">&#8594;</span></button>
+                            </div>
+                        </div>
+                        
+                        <div id="current-filter-info" style="margin-top: 15px; font-size: 0.9em; color: #666; text-align: center; font-weight: 500;">
+                            Affichage de toutes les commandes
+                        </div>
+                    </div>
+                    
+                    <!-- Ajout des boutons pour basculer entre les vues -->
+                    <div class="view-toggle-container" style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                        <button id="normal-view-btn" class="button active-view" style="flex: 1; min-width: 140px; max-width: 200px;">Vue Standard</button>
+                        <button id="daily-view-btn" class="button button-secondary" style="flex: 1; min-width: 140px; max-width: 200px;">Vue par Jour</button>
+                    </div>
+                    
+                    <p id="loading-message">Chargement des commandes...</p>
+                    <p id="error-message" class="hidden"></p>
+                    
+                    <!-- Vue standard des commandes -->
+                    <div id="orders-list">
+                        <!-- Les éléments de liste seront ajoutés ici par JavaScript -->
+                    </div>
+                    
+                    <!-- Nouvelle vue des commandes par jour -->
+                    <div id="orders-daily-view" class="hidden">
+                        <!-- Les groupes de commandes par jour seront ajoutés ici -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page Utilisateurs -->
+            <div id="users-page" class="admin-page">
+                <h2>Gestion des Utilisateurs</h2>
+                
+                <!-- Liste des utilisateurs -->
+                <div id="users-list-section" class="card" style="margin: 20px 0 30px 0;">
+                    <h3 style="text-align:center; margin-top:10px; margin-bottom: 20px; font-weight: 500;">Liste des Utilisateurs et leurs Commandes</h3>
+                    
+                    <!-- Bouton pour charger la liste des utilisateurs -->
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <button id="load-users-button" class="button">Charger la liste des utilisateurs</button>
+                    </div>
+                    
+                    <!-- Messages d'information -->
+                    <p id="users-loading-message" class="hidden" style="text-align: center;">Chargement des utilisateurs...</p>
+                    <p id="users-error-message" class="hidden" style="text-align: center; color: #721c24;"></p>
+                    
+                    <!-- Tableau des utilisateurs -->
+                    <div id="users-table-container" class="hidden" style="overflow-x: auto; margin-top: 15px;">
+                        <table style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                            <thead>
+                                <tr style="background-color: var(--primary-color); color: white;">
+                                    <th style="padding: 10px 15px; text-align: left; border: 1px solid var(--border-color);">Email</th>
+                                    <th style="padding: 10px 15px; text-align: left; border: 1px solid var(--border-color);">Nom</th>
+                                    <th style="padding: 10px 15px; text-align: left; border: 1px solid var(--border-color);">Prénom</th>
+                                    <th style="padding: 10px 15px; text-align: center; border: 1px solid var(--border-color);">Nombre de commandes</th>
+                                    <th style="padding: 10px 15px; text-align: center; border: 1px solid var(--border-color);">A un compte</th>
+                                    <th style="padding: 10px 15px; text-align: center; border: 1px solid var(--border-color);">Dernière commande</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body">
+                                <!-- Les lignes seront ajoutées dynamiquement par JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page Paramètres -->
+            <div id="settings-page" class="admin-page">
+                <h2>Paramètres</h2>
+                
+                <!-- Section réinitialisation de mot de passe -->
+                <div id="password-reset-section" class="card" style="max-width: 500px; margin: 20px auto;">
+                    <h3 style="text-align:center; margin-top:0; margin-bottom: 20px; font-weight: 500;">Réinitialiser le mot de passe d'un client</h3>
+                    <form id="reset-password-form">
+                        <div class="form-group">
+                            <label for="reset-email">Email du client :</label>
+                            <input type="email" id="reset-email" placeholder="client@example.com" required style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 5px; box-sizing: border-box; font-size: 1em;">
+                        </div>
+                        <button type="submit" id="reset-password-button" class="button" style="width: 100%;">Envoyer l'email de réinitialisation</button>
+                        <p id="reset-message" style="text-align: center; margin-top: 15px; font-size: 0.9em; min-height: 1.2em;"></p>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Section Vue Détaillée d'une Commande -->
+            <div id="order-details-view" class="hidden" style="background: var(--card-bg); border-radius: var(--border-radius); box-shadow: var(--card-shadow); margin-top: 20px; padding: 25px; animation: fadeIn 0.3s ease;">
+                <h2 style="color: var(--primary-color); border-bottom: 1px solid var(--secondary-color); padding-bottom: 8px; margin-top: 0;">Détails de la Commande</h2>
+                <div id="order-details-content">
+                    <!-- Le contenu détaillé sera injecté ici par JavaScript -->
+                </div>
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button id="back-to-list-button" class="button button-secondary print-hide">Retour à la liste</button>
+                    <button id="print-button" class="button print-hide">Imprimer la fiche</button>
+                </div>
+            </div>
+
+        </div> <!-- Fin du conteneur -->
+    </div> <!-- Fin du contenu principal -->
+
+    <script>
+        // --- Initialisation Firebase ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyD8JFpOoAYcOdavqDkLnzDqjFxRl8P_RE0",
+            authDomain: "amirat-3a58d.firebaseapp.com",
+            projectId: "amirat-3a58d",
+            storageBucket: "amirat-3a58d.firebasestorage.app",
+            messagingSenderId: "307977965766",
+            appId: "1:307977965766:web:c670f287860646de4087c7",
+            measurementId: "G-6WPLCESCRX"
+        };
+
+        // Initialiser Firebase
+        firebase.initializeApp(firebaseConfig);
+        // Initialiser Firestore
+        const db = firebase.firestore();
+        // Optionnel: Initialiser Auth (pour plus tard)
+        const auth = firebase.auth();
+
+        // --- Références DOM ---
+        const ordersListContainer = document.getElementById('orders-list-container');
+        const ordersListDiv = document.getElementById('orders-list');
+        const orderDetailsView = document.getElementById('order-details-view');
+        const orderDetailsContent = document.getElementById('order-details-content');
+        const loadingMessage = document.getElementById('loading-message');
+        const errorMessage = document.getElementById('error-message');
+        const backToListButton = document.getElementById('back-to-list-button');
+        const printButton = document.getElementById('print-button');
+        // Ajout des références pour la vue par jour
+        const ordersDailyView = document.getElementById('orders-daily-view');
+        const normalViewBtn = document.getElementById('normal-view-btn');
+        const dailyViewBtn = document.getElementById('daily-view-btn');
+        // Références pour le filtre de date
+        const dateFilterInput = document.getElementById('date-filter');
+        const applyDateFilterBtn = document.getElementById('apply-date-filter');
+        const resetDateFilterBtn = document.getElementById('reset-date-filter');
+        const previousDayBtn = document.getElementById('previous-day');
+        const nextDayBtn = document.getElementById('next-day');
+        const currentFilterInfo = document.getElementById('current-filter-info');
+        // Ajout des éléments de connexion
+        const loginSection = document.getElementById('login-section');
+        const loginForm = document.getElementById('login-form');
+        const loginEmailInput = document.getElementById('admin-email');
+        const loginPasswordInput = document.getElementById('admin-password');
+        const loginError = document.getElementById('login-error');
+        const logoutButton = document.getElementById('logout-button');
+        // Ajout des éléments de gestion utilisateurs
+        const usersSection = document.getElementById('users-section');
+        const resetPasswordForm = document.getElementById('reset-password-form');
+        const resetEmailInput = document.getElementById('reset-email');
+        const resetMessage = document.getElementById('reset-message');
+        // Références pour la liste des utilisateurs
+        const loadUsersButton = document.getElementById('load-users-button');
+        const usersLoadingMessage = document.getElementById('users-loading-message');
+        const usersErrorMessage = document.getElementById('users-error-message');
+        const usersTableContainer = document.getElementById('users-table-container');
+        const usersTableBody = document.getElementById('users-table-body');
+
+        // Variable pour stocker les données des commandes chargées
+        let loadedOrdersData = {};
+        // Variable pour stocker la date du filtre actuel
+        let currentFilterDate = null;
+
+        // --- Fonction pour afficher la LISTE des commandes ---
+        async function fetchAndDisplayOrders(filterDate = null) {
+            loadingMessage.classList.remove('hidden');
+            errorMessage.classList.add('hidden');
+            ordersListDiv.innerHTML = ''; // Vider la liste précédente
+            loadedOrdersData = {}; // Réinitialiser les données stockées
+
+            try {
+                // Récupérer les commandes depuis Firestore
+                let commandesQuery = db.collection("commandes").orderBy("dateCommande", "desc");
+                
+                // Appliquer le filtre de date si spécifié
+                if (filterDate) {
+                    // Convertir la date en début et fin de journée
+                    const startOfDay = new Date(filterDate);
+                    startOfDay.setHours(0, 0, 0, 0);
+                    
+                    const endOfDay = new Date(filterDate);
+                    endOfDay.setHours(23, 59, 59, 999);
+                    
+                    // Convertir en Timestamp Firestore
+                    const startTimestamp = firebase.firestore.Timestamp.fromDate(startOfDay);
+                    const endTimestamp = firebase.firestore.Timestamp.fromDate(endOfDay);
+                    
+                    // Filtrer les commandes pour cette journée
+                    commandesQuery = db.collection("commandes")
+                        .where("dateCommande", ">=", startTimestamp)
+                        .where("dateCommande", "<=", endTimestamp)
+                        .orderBy("dateCommande", "desc");
+                        
+                    // Mettre à jour l'information de filtre
+                    const formattedDate = filterDate.toLocaleDateString('fr-FR', {
+                        day: '2-digit', month: '2-digit', year: 'numeric'
+                    });
+                    currentFilterInfo.textContent = `Commandes du ${formattedDate}`;
+                    // Mettre à jour la valeur du sélecteur de date
+                    dateFilterInput.valueAsDate = filterDate;
+                } else {
+                    // Réinitialiser l'information de filtre
+                    currentFilterInfo.textContent = `Affichage de toutes les commandes`;
+                    // Vider le sélecteur de date
+                    dateFilterInput.value = '';
+                }
+                
+                // Stocker la date du filtre actuel
+                currentFilterDate = filterDate;
+
+                const commandesSnapshot = await commandesQuery.get();
+
+                if (commandesSnapshot.empty) {
+                    loadingMessage.textContent = filterDate 
+                        ? `Aucune commande trouvée pour le ${filterDate.toLocaleDateString('fr-FR')}.`
+                        : "Aucune commande trouvée.";
+                    return;
+                }
+
+                // Construire les éléments de la liste
+                commandesSnapshot.forEach(doc => {
+                    const commande = doc.data();
+                    const commandeId = doc.id; // Garder l'ID Firestore
+                    loadedOrdersData[commandeId] = commande; // Stocker les données complètes
+
+                    const listItem = document.createElement('div');
+                    listItem.classList.add('order-list-item');
+                    listItem.dataset.id = commandeId; // Stocker l'ID sur l'élément pour le clic
+
+                    // Formater la date (si elle existe et est valide)
+                    let formattedDate = 'N/A';
+                    if (commande.dateCommande && commande.dateCommande.toDate) {
+                        try {
+                            formattedDate = commande.dateCommande.toDate().toLocaleString('fr-FR', {
+                                day: '2-digit', month: '2-digit', year: 'numeric',
+                                hour: '2-digit', minute: '2-digit'
+                            });
+                        } catch (e) {
+                             console.warn("Date invalide pour la commande:", doc.id, commande.dateCommande);
+                         }
+                    }
+
+                    // Informations à afficher dans la liste
+                    const infoDiv = document.createElement('div');
+                    infoDiv.classList.add('order-list-info');
+                    infoDiv.innerHTML = `
+                        ${formattedDate}<br>
+                        <strong>${commande.referenceArticle || 'Ref Inconnue'}</strong> - 
+                        ${commande.prenom || ''} ${commande.nom || ''} (${commande.pseudoTikTok || '-'}) <br>
+                        <span class="order-list-id">ID: ${commandeId}</span>
+                    `;
+
+                     // Montant total
+                     const amountDiv = document.createElement('div');
+                     amountDiv.classList.add('order-list-amount');
+                     amountDiv.textContent = commande.montantTotalPaye ? commande.montantTotalPaye.toFixed(2) + ' ' + (commande.devise || 'EUR') : '-';
+
+                    listItem.appendChild(infoDiv);
+                    listItem.appendChild(amountDiv);
+
+                    ordersListDiv.appendChild(listItem);
+                });
+
+                loadingMessage.classList.add('hidden'); // Cacher le message de chargement
+                
+                // Si on est en vue journalière, mettre à jour aussi cette vue
+                if (dailyViewBtn.classList.contains('active-view')) {
+                    displayOrdersByDay();
+                }
+
+            } catch (error) {
+                console.error("Erreur lors de la récupération des commandes: ", error);
+                errorMessage.textContent = `Erreur lors du chargement des commandes. Vérifiez les règles Firestore et la console. (${error.message})`;
+                errorMessage.classList.remove('hidden');
+                loadingMessage.classList.add('hidden');
+            }
+        }
+
+        // --- Fonction pour afficher les DETAILS d'une commande ---
+        function displayOrderDetails(orderId) {
+            const commande = loadedOrdersData[orderId];
+            if (!commande) {
+                console.error("Données de commande non trouvées pour l'ID:", orderId);
+                errorMessage.textContent = "Erreur: Impossible de charger les détails de cette commande.";
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+
+            // Formater la date
+            let formattedDate = 'N/A';
+            if (commande.dateCommande && commande.dateCommande.toDate) {
+                try {
+                     formattedDate = commande.dateCommande.toDate().toLocaleString('fr-FR', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit'
+                     });
+                } catch (e) { console.warn("Date commande invalide:", commande.dateCommande); }
+            }
+
+            // Helper pour créer une ligne de détail
+            const createDetailItem = (label, value) => {
+                const val = value || '-'; // Afficher '-' si vide
+                return `<div class="detail-item"><strong>${label}:</strong> <span>${val}</span></div>`;
+            };
+
+            // Construire le HTML des détails
+            orderDetailsContent.innerHTML = `
+                <div class="detail-section">
+                    <h3>Commande</h3>
+                    ${createDetailItem('Date', formattedDate)}
+                    ${createDetailItem('ID Commande', orderId)}
+                    ${createDetailItem('Référence Article', commande.referenceArticle)}
+                    ${createDetailItem('Pseudo TikTok', commande.pseudoTikTok)}
+                </div>
+                <div class="detail-section">
+                    <h3>Client</h3>
+                    ${createDetailItem('Prénom', commande.prenom)}
+                    ${createDetailItem('Nom', commande.nom)}
+                    ${createDetailItem('Email', commande.email)}
+                    ${createDetailItem('Téléphone', commande.telephone)}
+                </div>
+                 <div class="detail-section">
+                    <h3>Adresse de Livraison</h3>
+                    ${createDetailItem('Adresse', commande.adresse)}
+                    ${createDetailItem('Code Postal', commande.codePostal)}
+                    ${createDetailItem('Ville', commande.ville)}
+                    ${createDetailItem('Pays', commande.pays)}
+                </div>
+                 <div class="detail-section">
+                    <h3>Montant & Livraison</h3>
+                     ${createDetailItem('Montant Article', commande.montantArticle ? commande.montantArticle.toFixed(2) + ' ' + (commande.devise || 'EUR') : '-')}
+                    ${createDetailItem('Frais Livraison', commande.fraisLivraison ? commande.fraisLivraison.toFixed(2) + ' ' + (commande.devise || 'EUR') : '-')}
+                    ${createDetailItem('Montant Total Payé', commande.montantTotalPaye ? '<strong>' + commande.montantTotalPaye.toFixed(2) + ' ' + (commande.devise || 'EUR') + '</strong>' : '-')}
+                     ${createDetailItem('Devise', commande.devise)}
+                    ${createDetailItem('Mode Livraison', commande.modeLivraison)}
+                </div>
+                 <div class="detail-section">
+                    <h3>Détails Paiement PayPal</h3>
+                    ${createDetailItem('Statut Paiement', commande.statutPaiementPayPal)}
+                    ${createDetailItem('ID Transaction', commande.paypalTransactionId)}
+                    ${createDetailItem('Nom Payeur', commande.paypalPayerNom)}
+                    ${createDetailItem('Email Payeur', commande.paypalPayerEmail)}
+                    ${createDetailItem('ID Payeur', commande.paypalPayerId)}
+                </div>
+            `;
+
+            // Masquer toutes les pages d'administration
+            adminPages.forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Afficher la vue détaillée
+            orderDetailsView.classList.remove('hidden');
+        }
+
+        // --- Fonction pour REGROUPER et AFFICHER les commandes par jour ---
+        function displayOrdersByDay() {
+            // Vider le conteneur de la vue par jour
+            const dailyViewContainer = document.getElementById('orders-daily-view');
+            dailyViewContainer.innerHTML = '';
+            
+            if (Object.keys(loadedOrdersData).length === 0) {
+                dailyViewContainer.innerHTML = '<p>Aucune commande à afficher.</p>';
+                return;
+            }
+            
+            // Créer un objet pour regrouper les commandes par date (YYYY-MM-DD)
+            const ordersByDay = {};
+            const totals = {};
+            
+            // Parcourir toutes les commandes chargées
+            Object.entries(loadedOrdersData).forEach(([orderId, commande]) => {
+                // Vérifier si la date existe et est valide
+                if (commande.dateCommande && commande.dateCommande.toDate) {
+                    try {
+                        // Obtenir la date au format YYYY-MM-DD
+                        const orderDate = commande.dateCommande.toDate();
+                        const dateStr = orderDate.toISOString().split('T')[0]; // Format YYYY-MM-DD
+                        
+                        // Initialiser le tableau pour cette date s'il n'existe pas encore
+                        if (!ordersByDay[dateStr]) {
+                            ordersByDay[dateStr] = [];
+                            totals[dateStr] = 0;
+                        }
+                        
+                        // Ajouter cette commande au groupe du jour
+                        ordersByDay[dateStr].push({
+                            id: orderId,
+                            data: commande
+                        });
+                        
+                        // Ajouter au total si le montant existe
+                        if (commande.montantTotalPaye) {
+                            totals[dateStr] += parseFloat(commande.montantTotalPaye);
+                        }
+                    } catch (e) {
+                        console.warn("Date invalide pour la commande:", orderId, commande.dateCommande);
+                    }
+                }
+            });
+            
+            // Trier les jours par date (du plus récent au plus ancien)
+            let sortedDays = Object.keys(ordersByDay).sort().reverse();
+            
+            // Si un filtre de date est actif, réorganiser pour montrer cette date en premier
+            if (currentFilterDate) {
+                const filterDateStr = currentFilterDate.toISOString().split('T')[0];
+                
+                // Si cette date existe dans les commandes
+                if (ordersByDay[filterDateStr]) {
+                    // Retirer la date filtrée de la liste
+                    sortedDays = sortedDays.filter(date => date !== filterDateStr);
+                    // La placer au début
+                    sortedDays.unshift(filterDateStr);
+                }
+            }
+            
+            // Créer un groupe pour chaque jour
+            sortedDays.forEach(dateStr => {
+                const orders = ordersByDay[dateStr];
+                const totalAmount = totals[dateStr];
+                
+                // Formatter la date pour l'affichage
+                const dateParts = dateStr.split('-');
+                const formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+                
+                // Vérifier si c'est la date filtrée
+                const isFilteredDate = currentFilterDate && 
+                    dateStr === currentFilterDate.toISOString().split('T')[0];
+                
+                // Créer le groupe pour ce jour
+                const dayGroup = document.createElement('div');
+                dayGroup.classList.add('daily-group');
+                
+                // Créer l'en-tête avec la date et le total
+                const header = document.createElement('div');
+                header.classList.add('daily-header');
+                // Si c'est la date filtrée, utiliser une couleur différente
+                if (isFilteredDate) {
+                    header.style.backgroundColor = 'var(--secondary-color)'; // Utiliser la couleur secondaire au lieu du vert
+                }
+                
+                header.innerHTML = `
+                    <div class="daily-date">${formattedDate}${isFilteredDate ? ' (Date sélectionnée)' : ''}</div>
+                    <div class="daily-total">${totalAmount.toFixed(2)} € (${orders.length} commande${orders.length > 1 ? 's' : ''})</div>
+                `;
+                
+                // Ajouter un gestionnaire d'événement pour plier/déplier le groupe
+                header.addEventListener('click', function() {
+                    const ordersDiv = this.nextElementSibling;
+                    ordersDiv.classList.toggle('collapsed');
+                });
+                
+                // Créer le conteneur pour les commandes de ce jour
+                const ordersDiv = document.createElement('div');
+                ordersDiv.classList.add('daily-orders');
+                
+                // Pour la date filtrée, ouvrir le groupe par défaut; pour les autres, le fermer
+                if (!isFilteredDate) {
+                    ordersDiv.classList.add('collapsed');
+                }
+                
+                // Ajouter chaque commande du jour
+                orders.forEach(order => {
+                    const commande = order.data;
+                    const commandeId = order.id;
+                    
+                    // Cloner le code de création d'élément de liste depuis fetchAndDisplayOrders
+                    const listItem = document.createElement('div');
+                    listItem.classList.add('order-list-item');
+                    listItem.dataset.id = commandeId;
+                    
+                    // Formater l'heure (sans la date)
+                    let formattedTime = 'N/A';
+                    if (commande.dateCommande && commande.dateCommande.toDate) {
+                        try {
+                            formattedTime = commande.dateCommande.toDate().toLocaleTimeString('fr-FR', {
+                                hour: '2-digit', 
+                                minute: '2-digit'
+                            });
+                        } catch (e) {
+                            console.warn("Heure invalide pour la commande:", commandeId);
+                        }
+                    }
+                    
+                    // Informations à afficher dans la liste
+                    const infoDiv = document.createElement('div');
+                    infoDiv.classList.add('order-list-info');
+                    infoDiv.innerHTML = `
+                        <strong>${formattedTime}</strong> - 
+                        ${commande.referenceArticle || 'Ref Inconnue'} - 
+                        ${commande.prenom || ''} ${commande.nom || ''} (${commande.pseudoTikTok || '-'}) <br>
+                        <span class="order-list-id">ID: ${commandeId}</span>
+                    `;
+                    
+                    // Montant total
+                    const amountDiv = document.createElement('div');
+                    amountDiv.classList.add('order-list-amount');
+                    amountDiv.textContent = commande.montantTotalPaye ? commande.montantTotalPaye.toFixed(2) + ' €' : '-';
+                    
+                    listItem.appendChild(infoDiv);
+                    listItem.appendChild(amountDiv);
+                    
+                    ordersDiv.appendChild(listItem);
+                });
+                
+                // Assembler le groupe
+                dayGroup.appendChild(header);
+                dayGroup.appendChild(ordersDiv);
+                
+                // Ajouter le groupe au conteneur
+                dailyViewContainer.appendChild(dayGroup);
+            });
+        }
+
+        // --- Gestionnaires d'événements ---
+
+        // Gestionnaires pour basculer entre les vues standard et par jour
+        normalViewBtn.addEventListener('click', () => {
+            // Activer le bouton vue standard
+            normalViewBtn.classList.add('active-view');
+            dailyViewBtn.classList.remove('active-view');
+            // Afficher la vue standard, cacher la vue par jour
+            ordersListDiv.classList.remove('hidden');
+            ordersDailyView.classList.add('hidden');
+        });
+        
+        dailyViewBtn.addEventListener('click', () => {
+            // Activer le bouton vue par jour
+            dailyViewBtn.classList.add('active-view');
+            normalViewBtn.classList.remove('active-view');
+            // Afficher la vue par jour, cacher la vue standard
+            ordersDailyView.classList.remove('hidden');
+            ordersListDiv.classList.add('hidden');
+            // Générer/actualiser la vue par jour
+            displayOrdersByDay();
+        });
+
+        // Clic sur un élément de la liste
+        ordersListDiv.addEventListener('click', (event) => {
+            const listItem = event.target.closest('.order-list-item');
+            if (listItem && listItem.dataset.id) {
+                displayOrderDetails(listItem.dataset.id);
+            }
+        });
+        
+        // Clic sur un élément de la liste dans la vue par jour
+        ordersDailyView.addEventListener('click', (event) => {
+            const listItem = event.target.closest('.order-list-item');
+            if (listItem && listItem.dataset.id) {
+                displayOrderDetails(listItem.dataset.id);
+            }
+        });
+
+        // Clic sur le bouton "Retour à la liste"
+        backToListButton.addEventListener('click', () => {
+            // Cacher la vue détaillée
+            orderDetailsView.classList.add('hidden');
+            
+            // Déterminer quelle page était active avant d'afficher les détails
+            const dashboardActive = document.getElementById('dashboard-page').classList.contains('active');
+            const ordersActive = document.getElementById('orders-page').classList.contains('active');
+            
+            // Par défaut, revenir au tableau de bord
+            if (!dashboardActive && !ordersActive) {
+                // Si aucune page n'est active, activer le tableau de bord
+                menuItems.forEach(item => {
+                    if (item.getAttribute('data-page') === 'dashboard') {
+                        item.click();
+                    }
+                });
+            } else if (ordersActive) {
+                // Si on était sur la page des commandes
+                // Afficher la dernière vue active (standard ou par jour)
+                if (dailyViewBtn.classList.contains('active-view')) {
+                    ordersListDiv.classList.add('hidden');
+                    ordersDailyView.classList.remove('hidden');
+                } else {
+                    ordersListDiv.classList.remove('hidden');
+                    ordersDailyView.classList.add('hidden');
+                }
+            }
+            // Si on était sur le tableau de bord, ne rien faire de plus
+            // (le tableau de bord reste affiché)
+            
+            // Cacher les erreurs éventuelles
+            errorMessage.classList.add('hidden');
+        });
+
+        // Clic sur le bouton "Imprimer"
+        printButton.addEventListener('click', () => {
+            window.print(); // Déclenche l'impression du navigateur
+        });
+
+        // --- Logique d'Authentification ---
+
+        // Gestion de la soumission du formulaire de connexion
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault(); // Empêcher le rechargement de la page
+            const email = loginEmailInput.value;
+            const password = loginPasswordInput.value;
+            loginError.textContent = ''; // Effacer l'ancien message d'erreur
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Connexion réussie, onAuthStateChanged s'en occupera
+                    console.log("Connexion réussie pour:", userCredential.user.email);
+                    // Pas besoin de cacher/afficher ici, onAuthStateChanged le fait
+                })
+                .catch((error) => {
+                    console.error("Erreur de connexion:", error);
+                    loginError.textContent = "Email ou mot de passe incorrect."; // Message d'erreur générique
+                });
+        });
+
+        // Gestion de la déconnexion
+        logoutButton.addEventListener('click', () => {
+            console.log("Clic sur le bouton de déconnexion");
+            auth.signOut().then(() => {
+                console.log("Utilisateur déconnecté");
+                // onAuthStateChanged s'occupera de cacher/afficher
+                // Rediriger vers la page de connexion
+                window.location.reload();
+            }).catch((error) => {
+                console.error("Erreur de déconnexion:", error);
+                alert("Erreur lors de la déconnexion: " + error.message);
+            });
+        });
+
+        // Gestion de la réinitialisation de mot de passe
+        resetPasswordForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = resetEmailInput.value;
+            resetMessage.textContent = 'Envoi en cours...';
+            resetMessage.style.color = 'inherit';
+
+            auth.sendPasswordResetEmail(email)
+                .then(() => {
+                    console.log("Email de réinitialisation envoyé à", email);
+                    resetMessage.textContent = `Email de réinitialisation envoyé avec succès à ${email}.`;
+                    resetMessage.style.color = 'green';
+                    resetEmailInput.value = ''; // Vider le champ
+                })
+                .catch((error) => {
+                    console.error("Erreur lors de l'envoi de l'email de réinitialisation:", error);
+                    if (error.code === 'auth/user-not-found') {
+                        resetMessage.textContent = "Erreur: Aucun utilisateur trouvé avec cet email.";
+                    } else {
+                        resetMessage.textContent = "Erreur lors de l'envoi de l'email.";
+                    }
+                    resetMessage.style.color = 'red';
+                });
+        });
+
+        // --- Fonction pour charger et afficher la liste des utilisateurs et leurs commandes ---
+        async function loadUsersData() {
+            usersLoadingMessage.classList.remove('hidden');
+            usersErrorMessage.classList.add('hidden');
+            usersTableContainer.classList.add('hidden');
+            usersTableBody.innerHTML = ''; // Vider le tableau
+            
+            try {
+                // 1. Récupérer toutes les commandes
+                const commandesSnapshot = await db.collection("commandes").get();
+                
+                if (commandesSnapshot.empty) {
+                    usersLoadingMessage.textContent = "Aucune commande trouvée.";
+                    return;
+                }
+                
+                // 2. Créer un objet pour regrouper par email
+                const userStats = {};
+                
+                // 3. Parcourir les commandes et les regrouper par email
+                commandesSnapshot.forEach(doc => {
+                    const commande = doc.data();
+                    const email = commande.email?.toLowerCase() || commande.paypalPayerEmail?.toLowerCase();
+                    
+                    if (!email) return; // Ignorer les commandes sans email
+                    
+                    // Initialiser l'utilisateur s'il n'existe pas encore
+                    if (!userStats[email]) {
+                        userStats[email] = {
+                            email: email,
+                            nom: commande.nom || commande.paypalPayerNom || '',
+                            prenom: commande.prenom || '',
+                            commandes: [],
+                            hasAccount: false, // Sera vérifié plus tard
+                            lastOrderDate: null
+                        };
+                    }
+                    
+                    // Ajouter la commande à cet utilisateur
+                    userStats[email].commandes.push({
+                        id: doc.id,
+                        date: commande.dateCommande || null,
+                        montant: commande.montantTotalPaye || 0
+                    });
+                    
+                    // Mettre à jour la date de dernière commande si nécessaire
+                    if (commande.dateCommande && 
+                        (!userStats[email].lastOrderDate || 
+                         commande.dateCommande.toDate() > userStats[email].lastOrderDate)) {
+                        userStats[email].lastOrderDate = commande.dateCommande.toDate();
+                    }
+                });
+                
+                // 4. Vérifier quels utilisateurs ont un compte
+                // Utiliser Admin SDK ou une fonction serverless serait idéal
+                // mais comme c'est côté client, on va faire une approche alternative
+                
+                // Créer une liste pour stocker les promesses de vérification
+                const userCheckPromises = [];
+                
+                // Pour chaque email, tenter d'envoyer un email de réinitialisation
+                // et intercepter les erreurs pour déterminer si le compte existe
+                Object.keys(userStats).forEach(email => {
+                    const checkPromise = auth.fetchSignInMethodsForEmail(email)
+                        .then(methods => {
+                            // Si des méthodes sont retournées, l'utilisateur a un compte
+                            userStats[email].hasAccount = methods && methods.length > 0;
+                        })
+                        .catch(error => {
+                            console.warn(`Erreur lors de la vérification du compte pour ${email}:`, error);
+                            // Par défaut, on suppose que l'utilisateur n'a pas de compte
+                            userStats[email].hasAccount = false;
+                        });
+                    
+                    userCheckPromises.push(checkPromise);
+                });
+                
+                // Attendre que toutes les vérifications soient terminées
+                await Promise.all(userCheckPromises);
+                
+                // 5. Trier les utilisateurs par nombre de commandes (décroissant)
+                const sortedUsers = Object.values(userStats).sort((a, b) => 
+                    b.commandes.length - a.commandes.length
+                );
+                
+                // 6. Remplir le tableau
+                sortedUsers.forEach(user => {
+                    const row = document.createElement('tr');
+                    
+                    // Formater la date de dernière commande
+                    let lastOrderDate = 'N/A';
+                    if (user.lastOrderDate) {
+                        lastOrderDate = user.lastOrderDate.toLocaleDateString('fr-FR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                        });
+                    }
+                    
+                    row.innerHTML = `
+                        <td>${user.email}</td>
+                        <td>${user.nom}</td>
+                        <td>${user.prenom}</td>
+                        <td style="text-align: center;">${user.commandes.length}</td>
+                        <td style="text-align: center;" class="${user.hasAccount ? 'has-account' : 'no-account'}">
+                            ${user.hasAccount ? 'Oui' : 'Non'}
+                        </td>
+                        <td style="text-align: center;">${lastOrderDate}</td>
+                    `;
+                    
+                    usersTableBody.appendChild(row);
+                });
+                
+                // 7. Afficher le tableau et cacher le message de chargement
+                usersTableContainer.classList.remove('hidden');
+                usersLoadingMessage.classList.add('hidden');
+                
+            } catch (error) {
+                console.error("Erreur lors du chargement des données utilisateurs:", error);
+                usersErrorMessage.textContent = `Erreur: ${error.message}`;
+                usersErrorMessage.classList.remove('hidden');
+                usersLoadingMessage.classList.add('hidden');
+            }
+        }
+        
+        // Gestionnaire d'événement pour le bouton de chargement des utilisateurs
+        loadUsersButton.addEventListener('click', loadUsersData);
+
+        // --- Gestion du menu hamburger et de la navigation entre les pages ---
+        const menuToggle = document.querySelector('.menu-toggle');
+        const menuHamburger = document.querySelector('.menu-hamburger');
+        const mainContent = document.querySelector('.main-content');
+        const menuItems = document.querySelectorAll('.menu-items li');
+        const adminPages = document.querySelectorAll('.admin-page');
+        
+        // Basculer l'état du menu
+        menuToggle.addEventListener('click', () => {
+            menuToggle.classList.toggle('active');
+            menuHamburger.classList.toggle('active');
+            mainContent.classList.toggle('menu-active');
+        });
+        
+        // Navigation entre les pages
+        menuItems.forEach(item => {
+            item.addEventListener('click', () => {
+                // Mettre à jour l'élément actif dans le menu
+                menuItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                
+                // Afficher la page correspondante
+                const pageName = item.getAttribute('data-page');
+                adminPages.forEach(page => {
+                    if (page.id === `${pageName}-page`) {
+                        page.classList.add('active');
+                    } else {
+                        page.classList.remove('active');
+                    }
+                });
+                
+                // Si on est sur mobile, fermer le menu après sélection
+                if (window.innerWidth <= 768) {
+                    menuToggle.classList.remove('active');
+                    menuHamburger.classList.remove('active');
+                    mainContent.classList.remove('menu-active');
+                }
+                
+                // Charger les données spécifiques à la page si nécessaire
+                if (pageName === 'dashboard') {
+                    loadDashboardData();
+                } else if (pageName === 'orders') {
+                    // Utiliser notre fonction qui affiche les commandes du jour et active la vue par jour
+                    loadOrdersPageWithTodayData();
+                } else if (pageName === 'users') {
+                    loadUsersData();
+                }
+            });
+        });
+        
+        // Fonction pour charger les données du tableau de bord
+        async function loadDashboardData() {
+            try {
+                // Total des commandes
+                const commandesSnapshot = await db.collection("commandes").get();
+                document.getElementById('total-orders').textContent = commandesSnapshot.size;
+                
+                // Total des clients uniques (par email)
+                const uniqueEmails = new Set();
+                let todaySales = 0;
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                commandesSnapshot.forEach(doc => {
+                    const commande = doc.data();
+                    const email = commande.email?.toLowerCase() || commande.paypalPayerEmail?.toLowerCase();
+                    if (email) {
+                        uniqueEmails.add(email);
+                    }
+                    
+                    // Calculer les ventes d'aujourd'hui
+                    if (commande.dateCommande && commande.montantTotalPaye) {
+                        const commandeDate = commande.dateCommande.toDate();
+                        commandeDate.setHours(0, 0, 0, 0);
+                        
+                        if (commandeDate.getTime() === today.getTime()) {
+                            todaySales += parseFloat(commande.montantTotalPaye);
+                        }
+                    }
+                });
+                
+                document.getElementById('total-customers').textContent = uniqueEmails.size;
+                document.getElementById('today-sales').textContent = todaySales.toFixed(2) + '€';
+                
+                // Afficher les 8 dernières commandes
+                const recentOrdersDiv = document.getElementById('recent-orders');
+                recentOrdersDiv.innerHTML = '';
+                
+                if (commandesSnapshot.size === 0) {
+                    recentOrdersDiv.innerHTML = '<p>Aucune commande récente.</p>';
+                    return;
+                }
+                
+                // Convertir les docs en tableau et trier par date
+                const orders = [];
+                commandesSnapshot.forEach(doc => {
+                    const commande = doc.data();
+                    commande.id = doc.id;
+                    orders.push(commande);
+                });
+                
+                // Trier par date (la plus récente en premier)
+                orders.sort((a, b) => {
+                    if (!a.dateCommande) return 1;
+                    if (!b.dateCommande) return -1;
+                    return b.dateCommande.toDate() - a.dateCommande.toDate();
+                });
+                
+                // Prendre les 8 premières
+                const recentOrders = orders.slice(0, 8);
+                
+                // Créer la liste
+                const ordersList = document.createElement('ul');
+                ordersList.style.listStyle = 'none';
+                ordersList.style.padding = '0';
+                ordersList.style.margin = '0';
+                
+                recentOrders.forEach(order => {
+                    const listItem = document.createElement('li');
+                    listItem.style.padding = '15px';
+                    listItem.style.borderBottom = '1px solid var(--border-color)';
+                    listItem.style.cursor = 'pointer';
+                    listItem.style.transition = 'background-color 0.2s';
+                    listItem.dataset.id = order.id;
+                    
+                    // Ajouter un effet hover plus visible
+                    listItem.style.position = 'relative'; // Pour l'effet de survol
+                    listItem.style.borderLeft = '3px solid transparent'; // Barre latérale invisible par défaut
+                    
+                    listItem.addEventListener('mouseover', () => {
+                        listItem.style.backgroundColor = 'var(--list-hover-bg)';
+                        listItem.style.borderLeft = '3px solid var(--primary-color)'; // Barre latérale colorée au survol
+                    });
+                    
+                    listItem.addEventListener('mouseout', () => {
+                        listItem.style.backgroundColor = '';
+                        listItem.style.borderLeft = '3px solid transparent';
+                    });
+                    
+                    // Gestion du clic pour afficher les détails
+                    listItem.addEventListener('click', () => {
+                        // S'assurer que les données sont correctement stockées
+                        if (typeof order.montantTotalPaye === 'string') {
+                            order.montantTotalPaye = parseFloat(order.montantTotalPaye);
+                        }
+                        
+                        // Stocker les données de la commande dans le store global
+                        loadedOrdersData[order.id] = order;
+                        
+                        console.log("Clic sur commande:", order.id);
+                        console.log("Données stockées:", loadedOrdersData[order.id]);
+                        
+                        // Afficher les détails
+                        displayOrderDetails(order.id);
+                    });
+                    
+                    // Formater la date
+                    let formattedDate = 'N/A';
+                    if (order.dateCommande) {
+                        try {
+                            formattedDate = order.dateCommande.toDate().toLocaleString('fr-FR', {
+                                day: '2-digit', month: '2-digit', year: 'numeric',
+                                hour: '2-digit', minute: '2-digit'
+                            });
+                        } catch (e) {
+                            console.warn("Date invalide pour la commande:", order.id);
+                        }
+                    }
+                    
+                    // Créer une structure plus détaillée
+                    listItem.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: bold; color: var(--primary-color);">
+                                    ${order.prenom || ''} ${order.nom || ''} 
+                                    <span style="color: #666; font-size: 0.9em;">(${order.pseudoTikTok || '-'})</span>
+                                </div>
+                                <div style="font-size: 0.85em; margin-top: 4px;">
+                                    ${formattedDate} 
+                                    <span style="margin-left: 10px; color: #666;">Ref: ${order.referenceArticle || 'N/A'}</span>
+                                </div>
+                                <div style="font-size: 0.85em; margin-top: 4px; color: #555;">
+                                    ${order.email || order.paypalPayerEmail || 'Email non disponible'}
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-weight: bold; font-size: 1.1em; color: var(--primary-color);">
+                                    ${order.montantTotalPaye ? order.montantTotalPaye.toFixed(2) + ' €' : '-'}
+                                </div>
+                                <div style="font-size: 0.8em; color: #666; margin-top: 3px;">
+                                    ${order.statutPaiementPayPal || 'Statut inconnu'}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    ordersList.appendChild(listItem);
+                });
+                
+                recentOrdersDiv.appendChild(ordersList);
+                
+            } catch (error) {
+                console.error("Erreur lors du chargement des données du tableau de bord:", error);
+                document.getElementById('recent-orders').innerHTML = '<p>Erreur lors du chargement des données.</p>';
+            }
+        }
+
+        // Écouteur de l'état d'authentification
+        auth.onAuthStateChanged((user) => {
+            if (user && user.uid === 'TcFXI1vqTWPL7CXGmiKJ3pKTMTt2') { // Vérifier si c'est l'UID admin
+                // L'utilisateur est l'ADMIN
+                console.log("Administrateur connecté:", user.email);
+                loginSection.classList.add('hidden'); // Cacher la connexion
+                logoutButton.classList.remove('hidden'); // Afficher le bouton déconnexion
+                
+                // Activer les fonctionnalités d'administration
+                menuToggle.classList.remove('hidden');
+                menuHamburger.classList.remove('hidden');
+                
+                // Afficher les pages d'administration
+                adminPages.forEach(page => {
+                    if (page.id === "dashboard-page") {
+                        page.classList.add('active');
+                    } else {
+                        page.classList.remove('active');
+                    }
+                    page.classList.remove('hidden');
+                });
+                
+                // Charger les données initiales du tableau de bord
+                loadDashboardData();
+
+            } else {
+                // L'utilisateur est déconnecté ou n'est pas l'admin
+                if (user) {
+                     console.log("Utilisateur non-admin connecté, déconnexion forcée pour admin panel:", user.email);
+                     auth.signOut(); // Déconnecter si ce n'est pas l'admin
+                }
+                 console.log("Aucun admin connecté");
+                loginSection.classList.remove('hidden'); // Afficher la connexion
+                
+                // Cacher tous les éléments d'administration
+                adminPages.forEach(page => page.classList.add('hidden'));
+                orderDetailsView.classList.add('hidden');
+                logoutButton.classList.add('hidden');
+                menuToggle.classList.add('hidden');
+                menuHamburger.classList.add('hidden');
+                
+                // Réinitialiser l'état du menu
+                menuToggle.classList.remove('active');
+                menuHamburger.classList.remove('active');
+                mainContent.classList.remove('menu-active');
+                
+                // Optionnel: Vider les champs et erreurs lors de la déconnexion
+                loginEmailInput.value = '';
+                loginPasswordInput.value = '';
+                loginError.textContent = '';
+                
+                // Vider les conteneurs de données
+                document.getElementById('orders-list').innerHTML = '';
+                document.getElementById('orders-daily-view').innerHTML = '';
+                document.getElementById('order-details-content').innerHTML = '';
+                document.getElementById('users-table-body').innerHTML = '';
+                document.getElementById('recent-orders').innerHTML = '<p>Chargement...</p>';
+                
+                // Réinitialiser les compteurs du dashboard
+                document.getElementById('total-orders').textContent = '0';
+                document.getElementById('total-customers').textContent = '0';
+                document.getElementById('today-sales').textContent = '0€';
+                
+                // Vider les données stockées
+                loadedOrdersData = {};
+            }
+        });
+
+        // --- Gestionnaires d'événements ---
+
+        // Gestionnaires pour les boutons du filtre de date
+        applyDateFilterBtn.addEventListener('click', () => {
+            const selectedDate = dateFilterInput.valueAsDate;
+            if (selectedDate) {
+                fetchAndDisplayOrders(selectedDate);
+                
+                // Activer la vue par jour automatiquement
+                if (!dailyViewBtn.classList.contains('active-view')) {
+                    dailyViewBtn.click();
+                }
+            } else {
+                // Afficher un message demandant de sélectionner une date
+                currentFilterInfo.textContent = "Veuillez sélectionner une date";
+                currentFilterInfo.style.color = "#dc3545";
+                setTimeout(() => {
+                    currentFilterInfo.style.color = "#666";
+                    currentFilterInfo.textContent = currentFilterDate 
+                        ? `Commandes du ${currentFilterDate.toLocaleDateString('fr-FR')}`
+                        : "Affichage de toutes les commandes";
+                }, 2000);
+            }
+        });
+        
+        resetDateFilterBtn.addEventListener('click', () => {
+            dateFilterInput.value = '';
+            fetchAndDisplayOrders(null);
+        });
+        
+        previousDayBtn.addEventListener('click', () => {
+            // Si une date est déjà sélectionnée, aller au jour précédent
+            if (currentFilterDate) {
+                const previousDay = new Date(currentFilterDate);
+                previousDay.setDate(previousDay.getDate() - 1);
+                fetchAndDisplayOrders(previousDay);
+                
+                // Activer la vue par jour automatiquement
+                if (!dailyViewBtn.classList.contains('active-view')) {
+                    dailyViewBtn.click();
+                }
+            } else if (dateFilterInput.valueAsDate) {
+                // Si une date est choisie mais pas encore appliquée
+                const previousDay = new Date(dateFilterInput.valueAsDate);
+                previousDay.setDate(previousDay.getDate() - 1);
+                dateFilterInput.valueAsDate = previousDay;
+            } else {
+                // Si aucune date n'est sélectionnée, prendre la date du jour et aller au jour précédent
+                const today = new Date();
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                fetchAndDisplayOrders(yesterday);
+                
+                // Activer la vue par jour automatiquement
+                if (!dailyViewBtn.classList.contains('active-view')) {
+                    dailyViewBtn.click();
+                }
+            }
+        });
+        
+        nextDayBtn.addEventListener('click', () => {
+            // Si une date est déjà sélectionnée, aller au jour suivant
+            if (currentFilterDate) {
+                const nextDay = new Date(currentFilterDate);
+                nextDay.setDate(nextDay.getDate() + 1);
+                
+                // Ne pas dépasser la date d'aujourd'hui
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                if (nextDay <= today) {
+                    fetchAndDisplayOrders(nextDay);
+                    
+                    // Activer la vue par jour automatiquement
+                    if (!dailyViewBtn.classList.contains('active-view')) {
+                        dailyViewBtn.click();
+                    }
+                } else {
+                    currentFilterInfo.textContent = "Impossible d'aller plus loin que la date actuelle";
+                    currentFilterInfo.style.color = "#dc3545";
+                    setTimeout(() => {
+                        currentFilterInfo.style.color = "#666";
+                        currentFilterInfo.textContent = currentFilterDate 
+                            ? `Commandes du ${currentFilterDate.toLocaleDateString('fr-FR')}`
+                            : "Affichage de toutes les commandes";
+                    }, 2000);
+                }
+            } else if (dateFilterInput.valueAsDate) {
+                // Si une date est choisie mais pas encore appliquée
+                const nextDay = new Date(dateFilterInput.valueAsDate);
+                nextDay.setDate(nextDay.getDate() + 1);
+                
+                // Ne pas dépasser la date d'aujourd'hui
+                const today = new Date();
+                if (nextDay <= today) {
+                    dateFilterInput.valueAsDate = nextDay;
+                }
+            } else {
+                // Si aucune date n'est sélectionnée, afficher aujourd'hui
+                fetchAndDisplayOrders(new Date());
+                
+                // Activer la vue par jour automatiquement
+                if (!dailyViewBtn.classList.contains('active-view')) {
+                    dailyViewBtn.click();
+                }
+            }
+        });
+        
+        // Touches clavier pour navigation rapide
+        document.addEventListener('keydown', (e) => {
+            // Si on est sur la page des commandes et que l'utilisateur n'est pas en train de saisir du texte
+            const isCommandsPageActive = document.getElementById('orders-page').classList.contains('active');
+            const isInputFocused = document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA';
+            
+            if (isCommandsPageActive && !isInputFocused) {
+                if (e.key === 'ArrowLeft') {
+                    // Flèche gauche -> jour précédent
+                    previousDayBtn.click();
+                } else if (e.key === 'ArrowRight') {
+                    // Flèche droite -> jour suivant
+                    nextDayBtn.click();
+                }
+            }
+        });
+
+        // Gestionnaires pour basculer entre les vues standard et par jour
+
+        // Au chargement initial, afficher les commandes du jour si l'utilisateur est connecté
+        document.addEventListener('DOMContentLoaded', () => {
+            // Vérifier si l'utilisateur est déjà connecté
+            const currentUser = auth.currentUser;
+            if (currentUser && currentUser.uid === 'TcFXI1vqTWPL7CXGmiKJ3pKTMTt2') {
+                // Activer la page dashboard par défaut (sera géré par onAuthStateChanged)
+            }
+            
+            // Ajouter le gestionnaire d'événement pour le bouton d'actualisation
+            document.getElementById('refresh-orders').addEventListener('click', function() {
+                // Afficher un message temporaire pour indiquer le rafraîchissement
+                const currentText = currentFilterInfo.textContent;
+                currentFilterInfo.textContent = "Actualisation des commandes...";
+                currentFilterInfo.style.color = "var(--primary-color)";
+                
+                // Recharger les commandes en utilisant le filtre de date actuel
+                if (currentFilterDate) {
+                    fetchAndDisplayOrders(currentFilterDate);
+                } else {
+                    fetchAndDisplayOrders(null);
+                }
+                
+                // Rétablir le message original après un court délai
+                setTimeout(() => {
+                    currentFilterInfo.style.color = "#666";
+                }, 1500);
+            });
+        });
+
+        // Fonction pour charger la page des commandes avec les commandes du jour
+        function loadOrdersPageWithTodayData() {
+            // Afficher les commandes du jour
+            const today = new Date();
+            fetchAndDisplayOrders(today);
+            
+            // Activer la vue par jour
+            normalViewBtn.classList.remove('active-view');
+            dailyViewBtn.classList.add('active-view');
+            ordersListDiv.classList.add('hidden');
+            ordersDailyView.classList.remove('hidden');
+        }
+    </script>
+
+</body>
+</html> 

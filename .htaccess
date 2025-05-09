@@ -1,0 +1,9 @@
+RewriteEngine On
+
+# Redirection du www vers le domaine principal sans www
+RewriteCond %{HTTP_HOST} ^www\.amirat-modestie\.fr$ [NC]
+RewriteRule ^(.*)$ https://amirat-modestie.fr/$1 [L,R=301]
+
+# Force HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

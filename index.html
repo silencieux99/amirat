@@ -1,0 +1,1951 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Permissions-Policy" content="unload=()">
+  <title>Paiement - Amirat Modestie</title>
+  <!-- Polices Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- SDK PayPal -->
+  <script src="https://www.paypal.com/sdk/js?client-id=AQjJbYRgueNFovkIJnJLX0T3TSyDi9_ZO4HySz_xNBesodr7b024_f2o7awAXVV1Os9ilAUTJICh8tGt&currency=EUR"></script>
+  <!-- Note: Mode LIVE activé. -->
+  <!-- Ancien Client ID Sandbox: AULOmpEz6uHmy9V2TUuDgu2jbwgdEyjb03EE-i6FBh4xVdUy30jTNq5_FTXU-o9y10xp9mwSoWAvFoWI -->
+  <!-- Note: Vous pouvez ajouter &disable-funding=card si vous voulez UNIQUEMENT PayPal -->
+  <!-- Stripe.js -->
+  <script src="https://js.stripe.com/v3/"></script>
+  <!-- Firebase SDK -->
+  <!-- Firebase App (noyau) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <!-- Firestore -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <!-- Firebase Auth -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <!-- Firebase SDK (placeholder) -->
+  <!-- <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-app.js"></script> -->
+  <!-- <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-database.js"></script> -->
+  <style>
+    :root {
+      --primary-color: #a78b9f; /* Mauve doux */
+      --secondary-color: #d63384; /* Rose accentué */
+      --background-color: #FFF0F5; /* Rose pâle (LavenderBlush) */
+      --text-color: #333;
+      --text-light: #555;
+      --border-color: #e0dce1;
+      --white-color: #fff;
+      --box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+      --border-radius: 8px;
+      --button-bg: var(--primary-color);
+      --button-hover-bg: #93708a; /* Mauve un peu plus foncé */
+      --button-secondary-bg: #f0eef1;
+      --button-secondary-hover-bg: #e0dce1;
+      --button-secondary-text: var(--primary-color);
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: var(--background-color);
+      color: var(--text-color);
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    .page-container {
+      max-width: 650px;
+      margin: 30px auto;
+      padding: 15px;
+    }
+
+    /* Style pour le logo */
+    .logo-container {
+      text-align: center;
+      margin-bottom: 20px; /* Espace sous le logo */
+    }
+    .logo-container img {
+      max-width: 150px; /* Ajustez si nécessaire */
+      height: auto;
+    }
+
+    .card {
+      background-color: var(--white-color);
+      padding: 25px 30px;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      margin-bottom: 25px;
+    }
+
+    /* Cacher les étapes par défaut */
+    #etape-livraison, #etape-recap {
+      display: none;
+    }
+
+    h1, h2 {
+      color: var(--primary-color);
+      text-align: center;
+      font-weight: 600;
+      margin-top: 0;
+    }
+
+    h1 {
+      font-size: 2em;
+      margin-bottom: 35px;
+    }
+
+    h2 {
+      font-size: 1.4em;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+    /* Ajout pour regrouper des champs sur la même ligne */
+    .form-row {
+      display: flex;
+      gap: 15px; /* Espace entre les champs */
+    }
+    .form-row .form-group {
+      flex: 1; /* Chaque groupe prend une part égale */
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--text-light);
+      font-size: 0.95em;
+    }
+
+    input[type="number"],
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"], /* Ajout type tel */
+    select { /* Ajout select pour pays */
+      width: 100%;
+      padding: 12px 15px;
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      box-sizing: border-box;
+      font-size: 1em;
+      font-family: 'Poppins', sans-serif;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease; /* Ajout transition ombre */
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary-color);
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(167, 139, 159, 0.2); /* Ombre plus visible */
+    }
+
+    .summary p, .recap-line {
+      display: flex;
+      justify-content: space-between;
+      margin: 8px 0;
+      font-size: 1.05em;
+      padding: 5px 0; /* Ajout padding */
+      border-bottom: 1px dashed var(--border-color); /* Ligne pointillée entre éléments */
+    }
+    .summary p:last-child, .recap-line:last-of-type {
+       border-bottom: none; /* Pas de ligne pour le dernier élément */
+    }
+
+    .summary span, .recap-value { /* Style pour la valeur */
+      font-weight: 600;
+      color: var(--secondary-color);
+      text-align: right; /* Aligner à droite */
+    }
+    .recap-label {
+       color: var(--text-light);
+    }
+
+    #montant-affiche {
+       /* Style spécifique plus nécessaire si on utilise le span */
+    }
+
+    .button-group {
+      margin-top: 30px;
+      display: flex;
+      justify-content: space-between; /* Espace entre Précédent/Suivant */
+      gap: 15px;
+    }
+
+    .btn {
+      padding: 12px 25px;
+      border: none;
+      border-radius: 5px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 1em;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.1s ease;
+      text-align: center;
+      flex-grow: 1; /* Pour que les boutons prennent la place */
+    }
+    .btn:active {
+      transform: scale(0.98); /* Effet d'appui */
+    }
+
+    .btn-primary {
+      background-color: var(--button-bg);
+      color: var(--white-color);
+    }
+    .btn-primary:hover {
+      background-color: var(--button-hover-bg);
+    }
+
+    .btn-secondary {
+      background-color: var(--button-secondary-bg);
+      color: var(--button-secondary-text);
+      border: 1px solid var(--border-color);
+    }
+    .btn-secondary:hover {
+      background-color: var(--button-secondary-hover-bg);
+    }
+    /* Style pour le bouton seul (ex: premier Suivant) */
+    .button-group.single {
+      justify-content: flex-end; /* Aligner à droite */
+    }
+     .button-group.single .btn {
+       flex-grow: 0; /* Ne pas étirer */
+     }
+
+    /* Style pour le conteneur PayPal et message */
+    #payment-buttons {
+      margin-top: 30px;
+      text-align: center;
+    }
+    #paypal-button-container {
+      margin-top: 20px;
+      max-width: 400px; /* Limiter largeur si besoin */
+      margin-left: auto;
+      margin-right: auto;
+      /* Style ajouté dynamiquement par PayPal SDK */
+    }
+    #payment-buttons p {
+      color: var(--text-light);
+      font-style: italic;
+    }
+    #paypal-message {
+       margin-top: 15px;
+       font-weight: bold;
+       text-align: center;
+    }
+    /* Styles Stripe supprimés */
+
+
+    /* Styles pour mobile */
+    @media (max-width: 700px) {
+      .page-container {
+        margin: 15px auto;
+      }
+      .card {
+        padding: 20px;
+      }
+      h1 {
+        font-size: 1.8em;
+        margin-bottom: 25px;
+      }
+      h2 {
+        font-size: 1.3em;
+      }
+       .form-row {
+         flex-direction: column; /* Champs l'un sous l'autre sur mobile */
+         gap: 0; /* Pas d'espace vertical géré par form-group */
+       }
+       .button-group {
+         flex-direction: column-reverse; /* Suivant en bas sur mobile */
+       }
+       .button-group.single {
+         flex-direction: column; /* Assurer cohérence */
+       }
+    }
+
+    /* Styles pour les options de livraison */
+    .shipping-options {
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      padding: 5px;
+      background-color: #fdfdfd;
+    }
+    .radio-option {
+      display: flex;
+      /* align-items: center; Commenté ou ajusté car flex-wrap peut changer l'alignement vertical souhaité */
+      align-items: flex-start; /* Aligner les items au début de l'axe transversal */
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-color);
+      cursor: pointer;
+      flex-wrap: wrap; /* Permet aux éléments de passer à la ligne si nécessaire */
+    }
+    .radio-option:last-child {
+      border-bottom: none;
+    }
+    .radio-option input[type="radio"] {
+      margin-right: 12px;
+      width: auto; /* Ne pas prendre toute la largeur */
+      accent-color: var(--primary-color); /* Couleur du point radio */
+      transform: scale(1.1); /* Légèrement plus grand */
+    }
+    .radio-option label {
+      display: flex;
+      justify-content: space-between; /* Pousser le prix à droite */
+      align-items: center;
+      width: 100%;
+      margin-bottom: 0; /* Annuler la marge par défaut des labels */
+      font-weight: normal; /* Poids normal pour le label */
+      cursor: pointer;
+      color: var(--text-color);
+    }
+    .radio-option label .shipping-cost {
+      font-weight: 600;
+      color: var(--primary-color);
+      margin-left: 10px; /* Espace avant le prix */
+    }
+
+    /* Styles pour l'étape Compte */
+    .auth-options {
+        display: flex;
+        flex-direction: column; /* Boutons l'un sous l'autre */
+        gap: 10px;
+        margin-bottom: 30px;
+    }
+    .auth-options .btn {
+        width: 100%; /* Boutons pleine largeur */
+    }
+    .auth-form h3, .auth-info p {
+        text-align: center;
+        font-weight: 500;
+    }
+     .auth-form {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border-color);
+    }
+    .auth-error {
+        color: #dc3545; /* Rouge erreur */
+        text-align: center;
+        margin-top: 10px;
+        font-size: 0.9em;
+        min-height: 1.2em;
+    }
+    .btn-link {
+        background: none;
+        border: none;
+        color: var(--primary-color);
+        text-decoration: underline;
+        cursor: pointer;
+        padding: 5px;
+        font-size: 0.9em;
+        display: block; /* Pour le centrer */
+        margin: 15px auto 0; /* Marge en haut et centrage */
+        text-align: center;
+    }
+    .btn-link:hover {
+        color: var(--secondary-color);
+    }
+    #user-logged-in p {
+         margin-bottom: 20px;
+    }
+    #logout-button {
+        margin-top: 10px;
+    }
+
+    /* Classe helper pour cacher */
+    .hidden {
+        display: none !important;
+    }
+
+    /* Styles pour le Modal Mondial Relay */
+    .mr-modal {
+        display: none; /* Caché par défaut, géré par JS */
+        position: fixed; /* Reste en place même si on scrolle */
+        z-index: 1000; /* Au-dessus de tout le reste */
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto; /* Permet de scroller SI le contenu est trop grand */
+        background-color: rgba(0,0,0,0.6); /* Fond noir semi-transparent */
+        padding-top: 10px;
+        padding-bottom: 10px;
+        padding-left: 5px;
+        padding-right: 5px;
+        box-sizing: border-box;
+    }
+
+    .mr-modal-content {
+        background-color: #fefefe;
+        margin: auto; /* Centrage horizontal */
+        padding: 10px;
+        border: 1px solid #888;
+        width: 100%;
+        max-height: calc(100vh - 20px);
+        box-sizing: border-box;
+        border-radius: var(--border-radius);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        position: relative; /* Pour positionner le bouton de fermeture */
+        display: flex; /* Utiliser flexbox pour la structure interne */
+        flex-direction: column; /* Organiser les enfants verticalement */
+    }
+    
+    /* Style pour le conteneur externe du widget pour gérer le scroll */
+    #mondial-relay-widget-container-outer {
+        flex-grow: 1; /* Prend l'espace vertical disponible */
+        overflow-y: auto; /* Active le scroll vertical si nécessaire */
+        min-height: 240px;
+        margin-top: 5px;
+    }
+
+
+    .mr-close-modal-btn {
+        color: #aaa;
+        position: absolute; /* Positionné par rapport à .mr-modal-content */
+        top: 10px;
+        right: 20px;
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .mr-close-modal-btn:hover,
+    .mr-close-modal-btn:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+    }
+    /* S'assurer que le loader est bien centré dans son parent si flex est utilisé */
+    #mondial-relay-loader {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 200px; /* Hauteur minimale pour le loader */
+    }
+
+    /* Style amélioré pour le bouton Choisir Point Relais */
+    #btnOpenMondialRelayModal {
+        width: 100%; /* Prend toute la largeur disponible */
+        padding: 10px 15px; /* Padding un peu plus généreux que btn-sm */
+        font-size: 0.95em; /* Taille de police légèrement ajustée */
+        background-color: var(--button-secondary-bg); /* Fond actuel */
+        color: var(--button-secondary-text); /* Couleur texte actuelle */
+        border: 1px solid var(--primary-color); /* Bordure avec couleur primaire */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* Légère ombre */
+        transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+    }
+
+    #btnOpenMondialRelayModal:hover {
+        background-color: var(--primary-color);
+        color: var(--white-color);
+        border-color: var(--button-hover-bg);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transform: translateY(-1px); /* Petit effet au survol */
+    }
+
+    /* Assurer que le conteneur des détails MR est bien visible aussi */
+    .mondial-relay-details-container {
+        /* width: 100%; est déjà inline, c'est bien */
+        /* margin-top: 10px; est déjà inline */
+        /* display: none; est géré par JS, c'est bien */
+        padding-top: 5px; /* Un peu d'espace au-dessus du bouton si besoin */
+    }
+
+    #displaySelectedMondialRelayInfo {
+        /* Styles existants sont OK, s'assurer qu'il est lisible */
+        line-height: 1.4;
+    }
+
+    /* Ajustements spécifiques pour mobile si nécessaire, 
+       bien que width:100% devrait déjà bien aider */
+    @media (max-width: 700px) {
+        #btnOpenMondialRelayModal {
+            padding: 12px 15px; /* Un peu plus grand sur mobile pour le clic */
+            font-size: 1em;
+        }
+
+        .radio-option {
+            /* flex-wrap: wrap; est déjà défini globalement maintenant */
+            /* S'assurer que le contenu ne déborde pas et que tout est bien aligné verticalement */
+        }
+
+        .mondial-relay-details-container {
+            flex-basis: 100%; /* S'assurer qu'il prend toute la largeur dans le flex-wrap */
+            margin-left: 0; /* Annuler toute marge gauche si héritée */
+            margin-top: 10px; /* Ajouter un peu d'espace par rapport au label au-dessus */
+        }
+
+        /* Ajustements pour le modal Mondial Relay sur mobile */
+        .mr-modal {
+            padding-top: 10px;
+            padding-bottom: 10px;
+            padding-left: 5px;
+            padding-right: 5px;
+            box-sizing: border-box;
+        }
+
+        .mr-modal-content {
+            width: 100%;
+            padding: 10px;
+            max-height: calc(100vh - 20px);
+            box-sizing: border-box;
+        }
+
+        #mondial-relay-widget-container-outer {
+            min-height: 240px;
+            margin-top: 5px;
+        }
+
+        .mr-modal-content h3 {
+            font-size: 1.0em;
+            margin-bottom: 8px;
+        }
+        
+        .mr-modal-content > p {
+            font-size: 0.8em;
+            line-height: 1.3;
+            margin-bottom: 10px;
+        }
+    }
+
+    /* Styles pour les messages d'erreur des formulaires */
+    #erreur-etape-article,
+    #erreur-code-postal-mr {
+        background-color: #ffebee; /* Fond rouge très clair */
+        color: #c62828; /* Texte rouge foncé */
+        border: 1px solid #ef9a9a; /* Bordure rouge clair */
+        border-radius: var(--border-radius);
+        padding: 10px 15px;
+        margin-top: 15px;
+        margin-bottom: 10px; /* Espace après le message d'erreur */
+        font-size: 0.9em;
+        text-align: left; /* Aligner le texte à gauche pour une meilleure lisibilité des listes d'erreurs */
+        line-height: 1.5;
+    }
+
+    #erreur-etape-article:empty,
+    #erreur-code-postal-mr:empty {
+        display: none; /* Cacher si vide */
+    }
+
+    /* Boutons de choix de paiement */
+    #choix-paiement {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    #choix-paiement label {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        cursor: pointer;
+        background: #f0eef1;
+        border: 2px solid var(--border-color);
+        border-radius: var(--border-radius);
+        padding: 14px 0;
+        font-weight: 500;
+        font-size: 1.08em;
+        transition: border-color 0.2s, background 0.2s, color 0.2s;
+        color: var(--primary-color);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+        position: relative;
+    }
+    #choix-paiement input[type="radio"] {
+        display: none;
+    }
+    #choix-paiement input[type="radio"]:checked + span {
+        color: var(--white-color);
+    }
+    #choix-paiement input[type="radio"]:checked + span::before {
+        content: '✔ ';
+        color: var(--secondary-color);
+        font-size: 1.1em;
+        margin-right: 2px;
+    }
+    #choix-paiement input[type="radio"]:checked ~ label {
+        border-color: var(--primary-color);
+        background: var(--primary-color);
+        color: var(--white-color);
+    }
+    #choix-paiement label.selected {
+        border-color: var(--primary-color);
+        background: var(--primary-color);
+        color: var(--white-color);
+    }
+    #choix-paiement label.selected span {
+        color: var(--white-color);
+    }
+    @media (max-width: 700px) {
+        #choix-paiement {
+            flex-direction: column;
+            gap: 10px;
+        }
+        #choix-paiement label {
+            padding: 12px 0;
+            font-size: 1em;
+        }
+    }
+
+    /* Styles pour le formulaire Stripe */
+    #stripe-payment-container {
+        width: 100%;
+        max-width: 500px;
+        margin: 0 auto;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    #card-form {
+        width: 100%;
+    }
+
+    #card-element {
+        padding: 12px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        background: white;
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 20px;
+    }
+
+    #card-errors {
+        color: #dc3545;
+        font-size: 14px;
+        margin-top: 8px;
+        margin-bottom: 16px;
+        text-align: center;
+    }
+
+    #card-form button[type="submit"] {
+        width: 100%;
+        padding: 12px;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: var(--border-radius);
+        font-size: 16px;
+        font-family: 'Poppins', sans-serif;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    #card-form button[type="submit"]:hover {
+        background: var(--button-hover-bg);
+    }
+
+    @media (max-width: 768px) {
+        #stripe-payment-container {
+            padding: 15px;
+        }
+        
+        #card-element {
+            padding: 10px;
+        }
+        
+        #card-form button[type="submit"] {
+            padding: 10px;
+            font-size: 14px;
+        }
+    }
+  </style>
+
+  <!-- Scripts externes requis pour Mondial Relay (placés dans le head ou avant la fin du body) -->
+  <!-- 1. jQuery (bibliothèque JavaScript) -->
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+  <!-- 2. Leaflet (pour l'affichage de la carte des points relais) -->
+  <script type="text/javascript" src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <!-- 3. Plugin Mondial Relay (doit être chargé APRÈS jQuery) -->
+  <script type="text/javascript" src="https://widget.mondialrelay.com/parcelshop-picker/jquery.plugin.mondialrelay.parcelshoppicker.min.js"></script>
+
+</head>
+<body>
+  <div class="page-container">
+    <!-- Ajout du conteneur pour le logo -->
+    <div class="logo-container">
+        <a href="index.html" style="display: inline-block;">
+            <img src="https://i.ibb.co/ymD4j0Y5/d64d95d9-3237-444f-b385-ccf91a50afec-removebg-preview.png" alt="Logo Amirat Modestie" style="max-width: 150px; height: auto; display: block;">
+        </a>
+    </div>
+
+    <h1>Paiement - Amirat Modestie</h1>
+
+    <p style="text-align: center; margin-top: -20px; margin-bottom: 25px; font-size: 0.95em; line-height: 1.5;">
+        <a href="mes-commandes.html" style="color: var(--primary-color); font-weight: 500; text-decoration: none; display: block; margin-bottom: 5px;">
+            Mes Commandes
+        </a>
+        <span style="font-size: 0.9em; color: var(--text-light);">
+            Retrouvez-nous sur TikTok :
+            <a href="https://www.tiktok.com/@amiratmodestie?_t=ZN-8w3eDnlsiGc&_r=1" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); font-weight: 500; text-decoration: none;">
+                @amiratmodestie
+            </a>
+        </span>
+    </p>
+
+    <!-- == ÉTAPE 1: Informations Article == -->
+    <div id="etape-article" class="card">
+      <h2>1. Votre Article</h2>
+      <div class="form-group">
+        <label for="reference">Référence de l'article :</label>
+        <input type="text" id="reference" name="reference" placeholder="Exemple 120" required>
+      </div>
+       <div class="form-row">
+         <div class="form-group">
+           <label for="tiktok">Pseudo TikTok :</label>
+           <input type="text" id="tiktok" name="tiktok" placeholder="Votre pseudo" required>
+         </div>
+         <div class="form-group">
+           <label for="montant">Montant convenu (€) :</label>
+           <input type="number" id="montant" name="montant" placeholder="0.00" min="0" step="0.01" required>
+         </div>
+       </div>
+      <div class="button-group single">
+        <button type="button" id="btn-vers-livraison" class="btn btn-primary">Suivant</button>
+      </div>
+      <div id="erreur-etape-article"></div>
+    </div>
+
+    <!-- == ÉTAPE 2: Informations Livraison == -->
+    <div id="etape-livraison" class="card">
+       <h2>2. Livraison</h2>
+       <div class="form-row">
+         <div class="form-group">
+           <label for="prenom">Prénom :</label>
+           <input type="text" id="prenom" name="prenom" required>
+         </div>
+         <div class="form-group">
+           <label for="nom">Nom :</label>
+           <input type="text" id="nom" name="nom" required>
+         </div>
+       </div>
+       <div class="form-group">
+         <label for="email">Email :</label>
+         <input type="email" id="email" name="email" placeholder="pour le suivi" required>
+       </div>
+       <div class="form-group">
+         <label for="telephone">Téléphone :</label>
+         <input type="tel" id="telephone" name="telephone" placeholder="pour le livreur">
+       </div>
+       <div class="form-group">
+         <label for="adresse">Adresse :</label>
+         <input type="text" id="adresse" name="adresse" required>
+       </div>
+       <div class="form-row">
+         <div class="form-group">
+           <label for="codePostal">Code Postal :</label>
+           <input type="text" id="codePostal" name="codePostal" required>
+         </div>
+         <div class="form-group">
+           <label for="ville">Ville :</label>
+           <input type="text" id="ville" name="ville" required>
+         </div>
+       </div>
+       <div class="form-group">
+         <label for="pays">Pays :</label>
+         <select id="pays" name="pays" required>
+           <option value="France">France</option>
+           <option value="Belgique">Belgique</option>
+           <option value="Luxembourg">Luxembourg</option>
+           <option value="Suisse">Suisse</option>
+           <!-- Ajouter d'autres pays si nécessaire -->
+         </select>
+       </div>
+       <div class="form-group">
+         <label>Mode de livraison :</label>
+         <div class="shipping-options">
+           <div class="radio-option">
+             <input type="radio" id="livraison_mondial_relay" name="modeDeLivraison" value="Mondial Relay" data-cost="5.90" checked>
+             <label for="livraison_mondial_relay">
+               Mondial Relay <span class="shipping-cost">5,90 €</span>
+             </label>
+             <div class="mondial-relay-details-container" style="width: 100%; margin-top: 10px; display: none;">
+                <div id="erreur-code-postal-mr" style="color: red; font-size: 0.85em; margin-bottom: 5px;"></div>
+                <button type="button" id="btnOpenMondialRelayModal" class="btn btn-secondary">Choisir / Modifier le Point Relais</button>
+                <div id="displaySelectedMondialRelayInfo" style="margin-top: 10px; padding: 10px; background-color: #f0f0f0; border-radius: 4px; font-size: 0.9em; border: 1px solid #e0e0e0;">
+                    Aucun point relais sélectionné.
+                </div>
+             </div>
+           </div>
+           <div class="radio-option">
+             <input type="radio" id="retrait_sur_place" name="modeDeLivraison" value="Retrait sur place" data-cost="0">
+             <label for="retrait_sur_place">
+               Retrait sur place (RDV)<span class="shipping-cost">0,00 €</span>
+             </label>
+           </div>
+         </div>
+       </div>
+       <div class="button-group">
+         <button type="button" id="btn-retour-article" class="btn btn-secondary">Précédent</button>
+         <button type="button" id="btn-vers-recap" class="btn btn-primary">Vérifier & Payer</button>
+       </div>
+    </div>
+
+    <!-- == ÉTAPE 3: Compte Client (Nouvelle Étape) == -->
+    <div id="etape-compte" class="card" style="display: none;">
+        <h2>3. Votre Compte</h2>
+        <p style="text-align:center; font-size: 0.95em; color: var(--text-light); margin-bottom: 25px;">
+            Connectez-vous pour un suivi plus facile ou créez un compte pour retrouver vos commandes plus tard.
+        </p>
+
+        <div id="auth-choices" class="auth-options">
+            <button type="button" class="btn btn-secondary auth-choice-btn" data-choice="login">J'ai déjà un compte</button>
+            <button type="button" class="btn btn-secondary auth-choice-btn" data-choice="register">Créer un compte</button>
+            <button type="button" class="btn btn-primary auth-choice-btn" data-choice="guest">Continuer sans compte</button>
+        </div>
+
+        <!-- Formulaire de Connexion (caché initialement) -->
+        <form id="login-form" class="hidden auth-form">
+            <h3 style="text-align:center; margin-bottom: 20px; font-weight: 500;">Connexion</h3>
+            <div class="form-group">
+                <label for="login-email">Email :</label>
+                <input type="email" id="login-email" required>
+            </div>
+            <div class="form-group">
+                <label for="login-password">Mot de passe :</label>
+                <input type="password" id="login-password" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Se connecter</button>
+            <p id="login-error" class="auth-error"></p>
+            <button type="button" class="btn btn-link back-to-choices">Choisir une autre option</button>
+        </form>
+
+        <!-- Formulaire d'Inscription (caché initialement) -->
+        <form id="register-form" class="hidden auth-form">
+            <h3 style="text-align:center; margin-bottom: 20px; font-weight: 500;">Créer un compte</h3>
+             <div class="form-group">
+                <label for="register-email">Email :</label>
+                <input type="email" id="register-email" required>
+            </div>
+            <div class="form-group">
+                <label for="register-password">Mot de passe :</label>
+                <input type="password" id="register-password" placeholder="Minimum 6 caractères" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Créer le compte</button>
+            <p id="register-error" class="auth-error"></p>
+             <button type="button" class="btn btn-link back-to-choices">Choisir une autre option</button>
+        </form>
+
+        <!-- Infos Utilisateur Connecté (caché initialement) -->
+         <div id="user-logged-in" class="hidden auth-info">
+             <p style="text-align:center; font-weight: 500;">Connecté en tant que : <strong id="user-email-display"></strong></p>
+             <div class="button-group" style="justify-content: center;">
+                  <button type="button" id="btn-compte-vers-recap" class="btn btn-primary">Continuer vers le récapitulatif</button>
+             </div>
+              <button type="button" id="logout-button" class="btn btn-link">Se déconnecter</button>
+         </div>
+
+        <!-- Boutons de navigation (cachés initialement) -->
+        <div id="compte-nav-buttons" class="button-group hidden">
+            <button type="button" id="btn-retour-livraison-compte" class="btn btn-secondary">Précédent</button>
+            <!-- Le bouton Suivant est géré par les formulaires/infos utilisateur -->
+        </div>
+    </div>
+
+    <!-- == ÉTAPE 4: Récapitulatif et Paiement (Anciennement 3) == -->
+    <div id="etape-recap" class="card">
+      <h2>4. Récapitulatif & Paiement</h2>
+
+      <div class="recap-section">
+        <h3>Votre Commande</h3>
+        <div class="recap-line"><span class="recap-label">Article :</span> <span class="recap-value" id="recap-reference">-</span></div>
+        <div class="recap-line"><span class="recap-label">Pseudo TikTok :</span> <span class="recap-value" id="recap-tiktok">-</span></div>
+        <div class="recap-line"><span class="recap-label">Montant Article :</span> <span class="recap-value" id="recap-montant">0.00 €</span></div>
+      </div>
+
+      <div class="recap-section" style="margin-top: 20px;">
+        <h3>Livraison</h3>
+        <div class="recap-line"><span class="recap-label">Nom :</span> <span class="recap-value" id="recap-nom">-</span></div>
+        <div class="recap-line"><span class="recap-label">Adresse :</span> <span class="recap-value" id="recap-adresse">-</span></div>
+        <div class="recap-line"><span class="recap-label">Email :</span> <span class="recap-value" id="recap-email">-</span></div>
+        <div class="recap-line"><span class="recap-label">Livraison :</span> <span class="recap-value" id="recap-livraison">Mondial Relay (5,90 €)</span></div>
+      </div>
+
+      <div class="recap-section" style="margin-top: 20px;">
+        <h3>Mode de paiement</h3>
+        <div id="choix-paiement">
+          <label>
+            <input type="radio" name="modePaiement" value="paypal" checked>
+            <span>PayPal</span>
+          </label>
+          <label style="flex:1; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="radio" name="modePaiement" value="stripe">
+            <span>Carte Bancaire</span>
+          </label>
+        </div>
+        
+        <!-- Conteneurs de paiement -->
+        <div id="payment-containers">
+          <!-- Conteneur PayPal -->
+          <div id="paypal-container">
+            <div id="paypal-button-container"></div>
+            <div id="paypal-message"></div>
+          </div>
+          
+          <!-- Conteneur Stripe -->
+          <div id="stripe-payment-container" style="display: none;">
+            <form id="card-form">
+              <div id="card-element"></div>
+              <div id="card-errors" role="alert"></div>
+              <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">Payer <span id="stripe-amount"></span></button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="recap-section summary" style="margin-top: 20px; border-top: 2px solid var(--primary-color); padding-top: 15px;">
+        <p>Sous-total : <span id="recap-sous-total">0.00 €</span></p>
+        <p>Livraison : <span id="recap-frais-livraison">5.90 €</span></p>
+        <p style="font-size: 1.2em; font-weight: bold; color: var(--primary-color);">Total à payer : <span id="recap-total" style="color: var(--secondary-color);">5.90 €</span></p>
+      </div>
+
+      <div class="button-group" style="margin-top: 25px;">
+          <button type="button" id="btn-retour-livraison" class="btn btn-secondary">Précédent</button>
+      </div>
+    </div>
+
+    <!-- == ÉTAPE 5: Confirmation (Anciennement 4) == -->
+    <div id="etape-confirmation" class="card" style="display: none;">
+         <h2>5. Confirmation de Paiement</h2>
+         <p>Merci <strong id="conf-payer-name"></strong> !</p>
+         <p>Votre paiement a été traité avec succès.</p>
+         <div class="recap-section" style="margin-top: 25px;">
+             <h3>Détails de la Transaction</h3>
+             <div class="recap-line"><span class="recap-label">ID Transaction PayPal :</span> <span class="recap-value" id="conf-paypal-id"></span></div>
+             <div class="recap-line"><span class="recap-label">Montant Payé :</span> <span class="recap-value" id="conf-amount"></span></div>
+         </div>
+         <div class="recap-section" style="margin-top: 20px;">
+             <h3>Résumé de la Commande</h3>
+             <div class="recap-line"><span class="recap-label">Article Réf. :</span> <span class="recap-value" id="conf-reference"></span></div>
+             <div class="recap-line"><span class="recap-label">Pseudo TikTok :</span> <span class="recap-value" id="conf-tiktok"></span></div>
+         </div>
+         <p style="margin-top: 30px; font-weight:500;">Nous allons traiter votre commande rapidement.</p>
+         <p style="font-size: 0.9em; color: var(--text-light);">Vous recevrez également une confirmation par email de la part de PayPal. En cas de question, n'hésitez pas à nous contacter.</p>
+         <!-- Optionnel: ajouter un bouton retour à l'accueil si nécessaire -->
+         <!-- <div style="text-align: center; margin-top: 20px;"><a href="/" class="btn btn-secondary">Retour à l'accueil</a></div> -->
+    </div>
+
+  </div>
+
+  <!-- Modal pour le Widget Mondial Relay -->
+  <div id="mondialRelayWidgetModal" class="mr-modal" style="display: none;">
+      <div class="mr-modal-content">
+          <span class="mr-close-modal-btn">&times;</span>
+          <h3>Choisissez votre Point Relais® Mondial Relay</h3>
+          <p style="font-size:0.9em; color:#555; margin-bottom:15px;">Si vous avez déjà saisi votre code postal, il sera utilisé pour la recherche.</p>
+          <div id="mondial-relay-widget-container-outer" style="flex-grow: 1; overflow-y: auto; min-height: 400px;">
+              <div id="mondial-relay-loader" style="padding: 30px; text-align: center; font-style: italic; color: #777;">Chargement du sélecteur de points relais...</div>
+              <!-- Le widget Mondial Relay sera injecté ici par le plugin -->
+              <div id="mondial-relay-widget-inner-container"></div> <!-- L'ID doit être correct pour l'injection du widget -->
+          </div>
+          <input type="hidden" id="selected-mr-data-raw" name="selectedMrDataRaw">
+      </div>
+  </div>
+
+  <script>
+    // --- Initialisation Firebase ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyD8JFpOoAYcOdavqDkLnzDqjFxRl8P_RE0",
+      authDomain: "amirat-3a58d.firebaseapp.com",
+      projectId: "amirat-3a58d",
+      storageBucket: "amirat-3a58d.firebasestorage.app",
+      messagingSenderId: "307977965766",
+      appId: "1:307977965766:web:c670f287860646de4087c7",
+      measurementId: "G-6WPLCESCRX"
+    };
+
+    // Initialiser Firebase
+    firebase.initializeApp(firebaseConfig);
+    // Initialiser Firestore
+    const db = firebase.firestore();
+    // Initialiser Firebase Auth
+    const auth = firebase.auth();
+    // Optionnel : si vous voulez utiliser les timestamps Firebase Server
+    const serverTimestamp = firebase.firestore.FieldValue.serverTimestamp;
+
+    // --- Gestion des Étapes ---
+    const etapeArticle = document.getElementById('etape-article');
+    const etapeLivraison = document.getElementById('etape-livraison');
+    const etapeCompte = document.getElementById('etape-compte');
+    const etapeRecap = document.getElementById('etape-recap');
+    const etapeConfirmation = document.getElementById('etape-confirmation');
+
+    const btnVersLivraison = document.getElementById('btn-vers-livraison');
+    const btnRetourArticle = document.getElementById('btn-retour-article');
+    const btnVersRecap = document.getElementById('btn-vers-recap');
+    const btnRetourLivraison = document.getElementById('btn-retour-livraison');
+    const btnRetourLivraisonCompte = document.getElementById('btn-retour-livraison-compte');
+    const btnCompteVersRecap = document.getElementById('btn-compte-vers-recap');
+
+    // Inputs pour le récapitulatif
+    const referenceInput = document.getElementById('reference');
+    const tiktokInput = document.getElementById('tiktok');
+    const montantInput = document.getElementById('montant');
+    const prenomInput = document.getElementById('prenom');
+    const nomInput = document.getElementById('nom');
+    const emailInput = document.getElementById('email');
+    const telephoneInput = document.getElementById('telephone');
+    const adresseInput = document.getElementById('adresse');
+    const codePostalInput = document.getElementById('codePostal');
+    const villeInput = document.getElementById('ville');
+    const paysInput = document.getElementById('pays');
+    // Ajout des boutons radio pour la livraison
+    const livraisonRadios = document.querySelectorAll('input[name="modeDeLivraison"]');
+
+    // Spans pour afficher le récapitulatif
+    const recapReference = document.getElementById('recap-reference');
+    const recapTiktok = document.getElementById('recap-tiktok');
+    const recapMontant = document.getElementById('recap-montant');
+    const recapNom = document.getElementById('recap-nom');
+    const recapAdresse = document.getElementById('recap-adresse');
+    const recapEmail = document.getElementById('recap-email');
+    const recapSousTotal = document.getElementById('recap-sous-total');
+    const recapFraisLivraison = document.getElementById('recap-frais-livraison');
+    const recapTotal = document.getElementById('recap-total');
+    // Ajout pour le libellé du mode de livraison dans le récap
+    const recapLivraisonLabel = document.getElementById('recap-livraison');
+
+    // Éléments de l'étape Compte
+    const authChoicesDiv = document.getElementById('auth-choices');
+    const authChoiceBtns = document.querySelectorAll('.auth-choice-btn');
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    const loginEmailInput = document.getElementById('login-email');
+    const loginPasswordInput = document.getElementById('login-password');
+    const loginError = document.getElementById('login-error');
+    const registerEmailInput = document.getElementById('register-email');
+    const registerPasswordInput = document.getElementById('register-password');
+    const registerError = document.getElementById('register-error');
+    const backToChoicesBtns = document.querySelectorAll('.back-to-choices');
+    const userLoggedInDiv = document.getElementById('user-logged-in');
+    const userEmailDisplay = document.getElementById('user-email-display');
+    const logoutButton = document.getElementById('logout-button');
+    const compteNavButtons = document.getElementById('compte-nav-buttons');
+
+    // Frais de livraison variables
+    let fraisLivraison = 0;
+    let modeLivraisonSelectionne = '';
+
+    // Variable globale pour stocker les détails du point relais MR sélectionné
+    let selectedMondialRelayDetails = null;
+
+    const erreurEtapeArticleDiv = document.getElementById('erreur-etape-article');
+
+    function formatCurrency(valeur) {
+       return valeur.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+    }
+
+    function afficherEtape(etapeToShow) {
+      etapeArticle.style.display = 'none';
+      etapeLivraison.style.display = 'none';
+      etapeCompte.style.display = 'none';
+      etapeRecap.style.display = 'none';
+      etapeConfirmation.style.display = 'none';
+
+      if (etapeToShow === 1) {
+        etapeArticle.style.display = 'block';
+      } else if (etapeToShow === 2) {
+        etapeLivraison.style.display = 'block';
+      } else if (etapeToShow === 3) {
+        etapeCompte.style.display = 'block';
+        // Gérer l'affichage interne de l'étape compte (choix/login/register/logged-in)
+        // L'état initial est géré par onAuthStateChanged et les clics sur les boutons
+        compteNavButtons.classList.remove('hidden'); // Afficher Précédent
+      } else if (etapeToShow === 4) {
+        updateShippingCost();
+        mettreAJourRecap();
+        etapeRecap.style.display = 'block';
+        // Initialiser le bouton PayPal quand on affiche l'étape 3
+        renderPayPalButton(); // Appel de la fonction PayPal
+      } else if (etapeToShow === 5) {
+        etapeConfirmation.style.display = 'block';
+      }
+      window.scrollTo(0, 0); // Remonter en haut de page
+    }
+
+    function mettreAJourRecap() {
+      const montant = parseFloat(montantInput.value) || 0;
+      const total = montant + fraisLivraison; // Utilise la variable globale fraisLivraison
+
+      recapReference.textContent = referenceInput.value || '-';
+      recapTiktok.textContent = tiktokInput.value || '-';
+      recapMontant.textContent = formatCurrency(montant);
+
+      recapNom.textContent = `${prenomInput.value || ''} ${nomInput.value || ''}`.trim() || '-';
+      recapAdresse.textContent = `${adresseInput.value || ''}, ${codePostalInput.value || ''} ${villeInput.value || ''} (${paysInput.value || ''})`.replace(/ ,/g,',').replace(/ \(/g,'(').replace(/,\s*\(/,' (').trim().replace(/^, |\(|\)$/g, '') || '-'; // Nettoyage simple
+      recapEmail.textContent = emailInput.textContent = emailInput.value || '-';
+
+      recapSousTotal.textContent = formatCurrency(montant);
+      // Afficher le libellé et le coût de la livraison choisie
+      recapLivraisonLabel.textContent = `${modeLivraisonSelectionne} (${formatCurrency(fraisLivraison)})`;
+      recapFraisLivraison.textContent = formatCurrency(fraisLivraison);
+      recapTotal.textContent = formatCurrency(total);
+    }
+
+    // Fonction pour mettre à jour les frais de livraison selon le choix
+    function updateShippingCost() {
+        const selectedRadio = document.querySelector('input[name="modeDeLivraison"]:checked');
+        const mondialRelayDetailsContainer = document.querySelector('.mondial-relay-details-container');
+
+        console.log("updateShippingCost appelée."); 
+        console.log("selectedRadio:", selectedRadio); 
+        console.log("mondialRelayDetailsContainer:", mondialRelayDetailsContainer); 
+
+        if (selectedRadio) {
+            fraisLivraison = parseFloat(selectedRadio.dataset.cost) || 0;
+            modeLivraisonSelectionne = selectedRadio.value;
+            console.log("Mode livraison choisi:", modeLivraisonSelectionne, "Coût:", fraisLivraison); 
+
+            if (modeLivraisonSelectionne === "Mondial Relay") {
+                console.log("Option Mondial Relay sélectionnée."); 
+                if (mondialRelayDetailsContainer) {
+                    mondialRelayDetailsContainer.style.display = 'block';
+                    console.log("mondialRelayDetailsContainer affiché."); 
+                } else {
+                    console.error("mondialRelayDetailsContainer est NULL, ne peut pas l'afficher !"); 
+                }
+            } else {
+                console.log("Autre option de livraison sélectionnée, ou pas Mondial Relay."); 
+                if (mondialRelayDetailsContainer) {
+                    mondialRelayDetailsContainer.style.display = 'none';
+                    console.log("mondialRelayDetailsContainer caché."); 
+                } else {
+                    console.error("mondialRelayDetailsContainer est NULL (dans le else), ne peut pas le cacher !"); 
+                }
+            }
+        } else {
+            console.warn("Aucun mode de livraison sélectionné (selectedRadio est null)."); 
+            fraisLivraison = 0; 
+            modeLivraisonSelectionne = '';
+            if (mondialRelayDetailsContainer) {
+                mondialRelayDetailsContainer.style.display = 'none';
+                console.log("mondialRelayDetailsContainer caché (aucun mode sélectionné)."); 
+            }
+        }
+
+        // Mettre à jour le récap si l'étape récap est visible
+        if (etapeRecap && etapeRecap.style.display === 'block') {
+            mettreAJourRecap();
+        }
+    }
+
+    // Navigation (MODIFIÉE)
+    btnVersLivraison.addEventListener('click', () => {
+        if (validerEtapeArticle()) {
+            afficherEtape(2);
+        }
+    });
+    btnRetourArticle.addEventListener('click', () => afficherEtape(1));
+    // btnVersRecap pointe maintenant vers l'étape Compte
+    btnVersRecap.addEventListener('click', () => {
+        // Pré-remplir email pour login/register si déjà saisi à l'étape livraison
+        if (emailInput.value) {
+             loginEmailInput.value = emailInput.value;
+             registerEmailInput.value = emailInput.value;
+        }
+        afficherEtape(3);
+    });
+    // btnRetourLivraison (sur page Récap) pointe vers l'étape Compte
+    btnRetourLivraison.addEventListener('click', () => afficherEtape(3));
+    // Nouveau bouton Précédent (sur page Compte) pointe vers Livraison
+    btnRetourLivraisonCompte.addEventListener('click', () => afficherEtape(2));
+    // Nouveau bouton Suivant (sur page Compte, si connecté) pointe vers Récap
+    btnCompteVersRecap.addEventListener('click', () => afficherEtape(4));
+
+    // --- Logique d'Authentification Client --- // NOUVEAU
+
+    // Gérer le clic sur les choix d'authentification
+    authChoiceBtns.forEach(button => {
+        button.addEventListener('click', () => {
+            const choice = button.dataset.choice;
+            authChoicesDiv.classList.add('hidden'); // Cacher les boutons de choix
+            compteNavButtons.classList.remove('hidden'); // Afficher le bouton Précédent
+
+            if (choice === 'login') {
+                loginForm.classList.remove('hidden');
+            } else if (choice === 'register') {
+                registerForm.classList.remove('hidden');
+            } else if (choice === 'guest') {
+                // Si guest, aller directement à l'étape suivante (Récap)
+                 afficherEtape(4);
+            }
+        });
+    });
+
+    // Gérer le clic sur "Choisir une autre option"
+    backToChoicesBtns.forEach(button => {
+         button.addEventListener('click', () => {
+             loginForm.classList.add('hidden');
+             registerForm.classList.add('hidden');
+             loginError.textContent = '';
+             registerError.textContent = '';
+             authChoicesDiv.classList.remove('hidden'); // Réafficher les choix
+             compteNavButtons.classList.add('hidden'); // Cacher le bouton Précédent général
+         });
+    });
+
+    // Gestion de la soumission du formulaire de connexion
+    loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = loginEmailInput.value;
+        const password = loginPasswordInput.value;
+        loginError.textContent = '';
+
+        auth.signInWithEmailAndPassword(email, password)
+            .then((userCredential) => {
+                console.log("Client connecté:", userCredential.user.email);
+                // onAuthStateChanged gèrera l'affichage
+            })
+            .catch((error) => {
+                console.error("Erreur connexion client:", error);
+                loginError.textContent = "Email ou mot de passe incorrect.";
+            });
+    });
+
+    // Gestion de la soumission du formulaire d'inscription
+    registerForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = registerEmailInput.value;
+        const password = registerPasswordInput.value;
+        registerError.textContent = '';
+
+        auth.createUserWithEmailAndPassword(email, password)
+            .then((userCredential) => {
+                console.log("Client inscrit et connecté:", userCredential.user.email);
+                // onAuthStateChanged gèrera l'affichage
+            })
+            .catch((error) => {
+                console.error("Erreur inscription client:", error);
+                if (error.code === 'auth/email-already-in-use') {
+                    registerError.textContent = "Cet email est déjà utilisé. Essayez de vous connecter.";
+                } else if (error.code === 'auth/weak-password') {
+                     registerError.textContent = "Le mot de passe doit faire au moins 6 caractères.";
+                } else {
+                    registerError.textContent = "Erreur lors de la création du compte.";
+                }
+            });
+    });
+
+    // Gestion de la déconnexion client
+    logoutButton.addEventListener('click', () => {
+        auth.signOut().then(() => {
+            console.log("Client déconnecté");
+            // onAuthStateChanged gèrera l'affichage
+        });
+    });
+
+    // Écouteur de l'état d'authentification pour l'étape Compte
+    auth.onAuthStateChanged(user => {
+        if (etapeCompte.style.display === 'block') { // Agir seulement si l'étape compte est visible
+            if (user) {
+                // Utilisateur connecté
+                userEmailDisplay.textContent = user.email;
+                loginForm.classList.add('hidden');
+                registerForm.classList.add('hidden');
+                authChoicesDiv.classList.add('hidden');
+                userLoggedInDiv.classList.remove('hidden');
+                compteNavButtons.classList.remove('hidden'); // Assurer que Précédent est visible
+            } else {
+                // Utilisateur déconnecté
+                userLoggedInDiv.classList.add('hidden');
+                // Afficher les choix par défaut, cacher les formulaires
+                authChoicesDiv.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+                registerForm.classList.add('hidden');
+                compteNavButtons.classList.add('hidden'); // Cacher Précédent général quand on est aux choix
+                loginError.textContent = '';
+                registerError.textContent = '';
+                // Optionnel: vider les champs
+                 loginEmailInput.value = '';
+                 loginPasswordInput.value = '';
+                 registerEmailInput.value = '';
+                 registerPasswordInput.value = '';
+            }
+        } else if (user) {
+             // Si l'utilisateur est connecté mais PAS sur l'étape compte (ex: revient sur la page)
+             // On pourrait l'envoyer direct à l'étape compte ou récap? Pour l'instant on ne fait rien
+             console.log("Utilisateur déjà connecté mais pas sur l'étape compte.");
+        }
+    });
+
+    // --- Logique pour le bouton PayPal ---
+
+    const paypalMessageContainer = document.getElementById('paypal-message');
+
+    function renderPayPalButton() {
+        // Empêcher le rendu multiple si on revient sur l'étape
+        const paypalContainer = document.getElementById('paypal-button-container');
+        if (paypalContainer.hasChildNodes()) {
+            console.log("Bouton PayPal déjà rendu.");
+            return; // Déjà rendu
+        }
+        console.log("Rendu du bouton PayPal...");
+
+        paypal.Buttons({
+            // Style du bouton
+            style: {
+                layout: 'vertical',
+                color: 'gold',
+                shape: 'rect',
+                label: 'paypal',
+                tagline: false,
+                menuPlacement: 'below'
+            },
+
+            // Configuration des options
+            allowBillingPayments: true,
+            applePaySupport: false,
+            commit: true,
+            currency: 'EUR',
+            debug: false,
+            disableSetCookie: true,
+            eagerOrderCreation: false,
+            env: 'production',
+            intent: 'capture',
+            locale: {
+                country: 'US',
+                lang: 'en'
+            },
+            hasShippingCallback: false,
+            platform: 'desktop',
+            vault: false,
+
+            // createOrder est appelé quand l'utilisateur clique sur le bouton PayPal
+            createOrder: function(data, actions) {
+                console.log('PayPal createOrder');
+                paypalMessageContainer.textContent = ""; // Effacer ancien message
+                paypalMessageContainer.style.color = 'inherit'; // Reset color
+
+                // Récupérer le montant final depuis le formulaire
+                const montantArticle = parseFloat(montantInput.value) || 0;
+                if (montantArticle <= 0) {
+                    paypalMessageContainer.textContent = "Erreur: Veuillez entrer un montant d'article valide.";
+                    paypalMessageContainer.style.color = 'red';
+                    return Promise.reject(new Error("Montant article invalide"));
+                }
+                const montantTotal = (montantArticle + fraisLivraison).toFixed(2); // Garder 2 décimales, utilise la variable globale fraisLivraison
+
+                // Validation simple du montant
+                if (montantTotal < 0.50) {
+                     paypalMessageContainer.textContent = "Erreur: Le montant total doit être d'au moins 0,50 €.";
+                     paypalMessageContainer.style.color = 'red';
+                     console.error("Montant PayPal invalide:", montantTotal);
+                     return Promise.reject(new Error("Montant total invalide"));
+                }
+
+                console.log("Montant total pour PayPal:", montantTotal);
+                // Créer l'ordre PayPal
+                return actions.order.create({
+                    purchase_units: [{
+                        amount: {
+                            value: montantTotal, // Le montant total
+                            currency_code: 'EUR'
+                        },
+                        // Optionnel : Ajouter une description ou une référence
+                        description: `Commande Amirat Modestie - ${referenceInput.value || 'Ref Inconnue'}`,
+                        // custom_id: `TikTok-${tiktokInput.value || 'Inconnu'}` // Peut être utile
+                    }]
+                });
+            },
+
+            // onApprove est appelé après que l'utilisateur ait approuvé le paiement dans la fenêtre PayPal
+            onApprove: function(data, actions) {
+                console.log('PayPal onApprove', data);
+                // Afficher un message de traitement pendant la capture
+                paypalMessageContainer.textContent = "Traitement du paiement en cours...";
+                paypalMessageContainer.style.color = 'inherit';
+
+                // Capturer les fonds de la transaction
+                return actions.order.capture().then(function(details) {
+                    console.log('Transaction complétée par ', details.payer.name.given_name, details);
+
+                    // 1. Récupérer les infos AVANT de cacher/désactiver
+                    const montantArticle = parseFloat(montantInput.value) || 0;
+                    const payerName = details.payer.name.given_name;
+                    const transactionId = details.id;
+                    const paidAmount = details.purchase_units[0].amount.value;
+                    const currencyCode = details.purchase_units[0].amount.currency_code;
+                    const finalReference = referenceInput.value || 'Non spécifié';
+                    const finalTiktok = tiktokInput.value || 'Non spécifié';
+
+                    // 2. Remplir la section de confirmation
+                    document.getElementById('conf-payer-name').textContent = payerName;
+                    document.getElementById('conf-paypal-id').textContent = transactionId;
+                    document.getElementById('conf-amount').textContent = `${paidAmount} ${currencyCode}`;
+                    document.getElementById('conf-reference').textContent = finalReference;
+                    document.getElementById('conf-tiktok').textContent = finalTiktok;
+
+                    // 3. Masquer l'étape récap et afficher l'étape confirmation
+                    etapeRecap.style.display = 'none';
+                    etapeConfirmation.style.display = 'block';
+
+                    // 4. Remonter en haut de page
+                    window.scrollTo(0, 0);
+
+                    // Nettoyer l'ancien message et cacher le bouton (n'est plus visible mais par sécurité)
+                    paypalMessageContainer.textContent = "";
+                    document.getElementById('paypal-button-container').innerHTML = '';
+
+                    // Désactiver les champs de l'étape récap (qui est cachée)
+                    document.querySelectorAll('#etape-recap input, #etape-recap select, #etape-recap button').forEach(el => el.disabled = true);
+
+                    // S'assurer que le mode et les frais sont bien les derniers sélectionnés
+                    updateShippingCost();
+
+                    // 5. Enregistrer la commande dans Firestore
+                    const commandeData = {
+                        // Infos Article
+                        referenceArticle: finalReference,
+                        pseudoTikTok: finalTiktok,
+                        montantArticle: montantArticle, // Montant article seul
+                        // Infos Client
+                        prenom: prenomInput.value || '',
+                        nom: nomInput.value || '',
+                        email: emailInput.value || '',
+                        telephone: telephoneInput.value || '',
+                        // Adresse
+                        adresse: adresseInput.value || '',
+                        codePostal: codePostalInput.value || '',
+                        ville: villeInput.value || '',
+                        pays: paysInput.value || '',
+                        // Infos Livraison & Paiement
+                        modeLivraison: modeLivraisonSelectionne, // Utilise la variable globale
+                        fraisLivraison: fraisLivraison,
+                        montantTotalPaye: parseFloat(paidAmount), // Assurer nombre
+                        devise: currencyCode,
+                        // Ajout de l'ID utilisateur si connecté
+                        userId: auth.currentUser ? auth.currentUser.uid : null,
+                        // Infos PayPal
+                        paypalTransactionId: transactionId,
+                        paypalPayerId: details.payer.payer_id,
+                        paypalPayerEmail: details.payer.email_address,
+                        paypalPayerNom: `${details.payer.name.given_name} ${details.payer.name.surname}`,
+                        statutPaiementPayPal: details.status, // Ex: 'COMPLETED'
+                        // Timestamp
+                        dateCommande: serverTimestamp() // Utilise l'heure du serveur Firebase
+                    };
+
+                    // Ajouter les détails du point relais si Mondial Relay est sélectionné
+                    if (modeLivraisonSelectionne === "Mondial Relay" && selectedMondialRelayDetails) {
+                        commandeData.pointRelais = {
+                            id: selectedMondialRelayDetails.id || '',
+                            nom: selectedMondialRelayDetails.nom || '',
+                            adresse: selectedMondialRelayDetails.adresse || '',
+                            codePostal: selectedMondialRelayDetails.codePostal || '',
+                            ville: selectedMondialRelayDetails.ville || '',
+                            pays: selectedMondialRelayDetails.pays || ''
+                        };
+                    }
+
+                    console.log("Données à enregistrer dans Firestore:", commandeData);
+
+                    db.collection("commandes").add(commandeData)
+                        .then((docRef) => {
+                            console.log("Commande enregistrée dans Firestore avec ID: ", docRef.id);
+                            // On pourrait stocker docRef.id quelque part si besoin
+                        })
+                        .catch((error) => {
+                            console.error("Erreur lors de l'enregistrement dans Firestore: ", error);
+                            // !!! Important en production : Mettre en place un système d'alerte
+                            // si l'enregistrement échoue (ex: envoyer un email, log spécifique)
+                            // pour pouvoir traiter la commande manuellement.
+                            paypalMessageContainer.textContent += " (Attention: Erreur interne lors de l'enregistrement, commande non sauvegardée automatiquement)";
+                            paypalMessageContainer.style.color = 'orange'; // Ou garder vert mais ajouter l'avertissement
+                        });
+
+                }).catch(function (error) {
+                    console.error('Erreur lors de la capture PayPal:', error);
+                    paypalMessageContainer.textContent = "Une erreur est survenue lors de la finalisation du paiement. Veuillez réessayer ou nous contacter.";
+                    paypalMessageContainer.style.color = 'red';
+                });
+            },
+
+            // onError est appelé en cas d'erreur lors de l'interaction avec PayPal
+            onError: function(err) {
+                console.error('Erreur PayPal Button:', err);
+                paypalMessageContainer.textContent = "Une erreur technique est survenue avec PayPal. Veuillez réessayer.";
+                paypalMessageContainer.style.color = 'red';
+            },
+
+            // onCancel est appelé si l'utilisateur ferme la fenêtre PayPal
+            onCancel: function (data) {
+                 console.log('Paiement PayPal annulé', data);
+                 paypalMessageContainer.textContent = "Vous avez annulé le paiement.";
+                 paypalMessageContainer.style.color = 'orange';
+             }
+
+        }).render('#paypal-button-container');
+        // Le bouton PayPal est maintenant affiché dans la div
+    }
+
+    // Mettre à jour le coût initial au chargement de la page, basé sur le radio coché par défaut
+    updateShippingCost();
+
+    // --- Fonction de validation pour l'étape 1 --- 
+    function validerEtapeArticle() {
+        const referenceValue = referenceInput.value.trim();
+        const tiktokValue = tiktokInput.value.trim();
+        const montantValue = montantInput.value.trim();
+        let messageErreur = "";
+
+        if (!referenceValue) {
+            messageErreur += "La référence de l'article est requise.<br>";
+        }
+        if (!tiktokValue) {
+            messageErreur += "Le pseudo TikTok est requis.<br>";
+        }
+        if (!montantValue) {
+            messageErreur += "Le montant convenu est requis.<br>";
+        } else if (parseFloat(montantValue) <= 0) {
+            messageErreur += "Le montant convenu doit être supérieur à 0.<br>";
+        }
+
+        if (messageErreur) {
+            erreurEtapeArticleDiv.innerHTML = messageErreur;
+            return false;
+        }
+
+        erreurEtapeArticleDiv.innerHTML = ""; // Effacer les erreurs précédentes
+        return true;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Sélection des éléments spécifiques à Mondial Relay ici, quand le DOM est prêt
+        const mondialRelayWidgetModal = document.getElementById('mondialRelayWidgetModal');
+        const mrCloseModalBtn = mondialRelayWidgetModal ? mondialRelayWidgetModal.querySelector('.mr-close-modal-btn') : null;
+        const btnOpenMondialRelayModal = document.getElementById('btnOpenMondialRelayModal');
+        const displaySelectedMondialRelayInfo = document.getElementById('displaySelectedMondialRelayInfo');
+        const mondialRelayLoader = document.getElementById('mondial-relay-loader');
+        const mrWidgetInnerContainer = document.getElementById('mondial-relay-widget-inner-container');
+        const erreurCodePostalMrDiv = document.getElementById('erreur-code-postal-mr'); // Nouveau div d'erreur
+
+        // Récupérer le champ code postal du formulaire d'adresse principal
+        // Assurez-vous que l'ID 'codePostal' est correct pour votre champ de code postal principal
+        // const codePostalInputForMR = document.getElementById('codePostal'); déjà défini plus haut en tant que codePostalInput
+        const paysInputForMR = document.getElementById('pays'); // Pour le pays associé au CP
+
+        console.log("DOM Chargé. Éléments MR:", {mondialRelayWidgetModal, btnOpenMondialRelayModal});
+
+        if (btnOpenMondialRelayModal) {
+            btnOpenMondialRelayModal.addEventListener('click', function() {
+                const cpValue = codePostalInput.value.trim(); // Utiliser codePostalInput qui est déjà défini globalement
+
+                if (!cpValue) {
+                    if (erreurCodePostalMrDiv) {
+                        erreurCodePostalMrDiv.textContent = "Veuillez d'abord saisir votre code postal.";
+                    }
+                    return; // Arrêter ici si le code postal est vide
+                }
+                
+                // Si le code postal est rempli, effacer le message d'erreur (s'il y en avait un)
+                if (erreurCodePostalMrDiv) {
+                    erreurCodePostalMrDiv.textContent = "";
+                }
+
+                console.log("Ouverture du modal Mondial Relay");
+                if (mondialRelayWidgetModal) mondialRelayWidgetModal.style.display = 'block';
+                if (mondialRelayLoader) mondialRelayLoader.style.display = 'block'; // Afficher le loader
+                if (mrWidgetInnerContainer) mrWidgetInnerContainer.innerHTML = ''; // Vider ancien widget si présent
+
+                const paysValue = paysInputForMR ? paysInputForMR.value.substring(0,2).toUpperCase() : 'FR';
+
+                console.log(`Utilisation CP: ${cpValue}, Pays: ${paysValue} pour le widget MR.`);
+
+                // Initialisation du widget Mondial Relay (jQuery requis)
+                // Le widget est injecté dans mrWidgetInnerContainer
+                console.log("Vérification avant init MR: typeof jQuery =", typeof jQuery);
+                console.log("Vérification avant init MR: mrWidgetInnerContainer =", mrWidgetInnerContainer);
+
+                if (typeof jQuery !== 'undefined' && mrWidgetInnerContainer) {
+                    jQuery(mrWidgetInnerContainer).MR_ParcelShopPicker({
+                        Target: "#selected-mr-data-raw", 
+                        Brand: "CC23I1SB", 
+                        Country: paysValue || "FR", 
+                        PostCode: cpValue, 
+                        Responsive: true,
+                        ShowResultsOnMap: true,
+                        Theme: "mondialrelay",
+                        OnParcelShopSelected: function(data) {
+                            console.log("Point Relais MR sélectionné:", data);
+                            selectedMondialRelayDetails = {
+                                id: data.ID,
+                                nom: data.Nom,
+                                adresse: `${data.Adresse1} ${data.Adresse2}`.trim(),
+                                codePostal: data.CP,
+                                ville: data.Ville,
+                                pays: data.Pays
+                            };
+                            if (displaySelectedMondialRelayInfo) {
+                                displaySelectedMondialRelayInfo.innerHTML = 
+                                    `<strong>${selectedMondialRelayDetails.nom}</strong><br>
+                                     ${selectedMondialRelayDetails.adresse}<br>
+                                     ${selectedMondialRelayDetails.codePostal} ${selectedMondialRelayDetails.ville}`;
+                            }
+                            if (mondialRelayWidgetModal) mondialRelayWidgetModal.style.display = 'none';
+                            if (mondialRelayLoader) mondialRelayLoader.style.display = 'none';
+                             if (etapeRecap && etapeRecap.style.display === 'block') {
+                                mettreAJourRecap();
+                            }
+                        },
+                        OnSearchSuccess: function() {
+                            if (mondialRelayLoader) mondialRelayLoader.style.display = 'none';
+                        },
+                        OnNoResultReturned: function() {
+                            if (mondialRelayLoader) mondialRelayLoader.style.display = 'none';
+                        }
+                    });
+                } else {
+                    console.error("jQuery ou mrWidgetInnerContainer non disponible pour initialiser le widget MR.");
+                    if (typeof jQuery === 'undefined') {
+                        console.error("jQuery n'est PAS défini au moment de l'initialisation du widget MR.");
+                    }
+                    if (!mrWidgetInnerContainer) {
+                        console.error("mrWidgetInnerContainer est NULL. Vérifiez l'ID HTML 'mondial-relay-widget-inner-container'.");
+                    }
+                    if (mondialRelayLoader) mondialRelayLoader.style.display = 'none';
+                }
+            });
+        }
+
+        if (mrCloseModalBtn) {
+            mrCloseModalBtn.addEventListener('click', function() {
+                if (mondialRelayWidgetModal) mondialRelayWidgetModal.style.display = 'none';
+            });
+        }
+
+        // Fermer le modal si on clique en dehors du contenu
+        if (mondialRelayWidgetModal) {
+            window.addEventListener('click', (event) => {
+                if (event.target == mondialRelayWidgetModal) {
+                    mondialRelayWidgetModal.style.display = 'none';
+                }
+            });
+        }
+    });
+
+    // --- Intégration Stripe et gestion du choix de paiement ---
+    // Initialisation de Stripe (UNE SEULE FOIS)
+    const BACKEND_URL = 'https://amirat-backend.onrender.com';
+    const STRIPE_ENDPOINT = '/stripe/create-payment-intent';
+    
+    // Initialisation unique de Stripe
+    let stripe;
+    if (!window.stripeInstance) {
+        stripe = Stripe('pk_live_51RKls0CVQByp6tdHP6qQIsgrqqrXLonXE8VtSDGSLiq39dgAz59uTxwc5qEfVkoH7cXHTKjPHnMLsLmSInK2H8DC00zXd20viZ', {
+            apiVersion: '2023-10-16',
+            stripeAccount: 'acct_1RKls0CVQByp6tdH',
+            betas: ['elements_enable_deferred_intent_beta_1']
+        });
+        window.stripeInstance = stripe;
+    } else {
+        stripe = window.stripeInstance;
+    }
+
+    // Sélection des boutons radio de paiement
+    const choixPaiementRadios = document.querySelectorAll('input[name="modePaiement"]');
+
+    // Fonction pour gérer l'affichage du mode de paiement
+    function gererAffichagePaiement() {
+        const modePaiement = document.querySelector('input[name="modePaiement"]:checked').value;
+        const stripeContainer = document.getElementById('stripe-payment-container');
+        const paypalContainer = document.getElementById('paypal-container');
+        
+        console.log("Mode de paiement sélectionné:", modePaiement);
+        
+        if (modePaiement === 'paypal') {
+            console.log("Affichage du mode PayPal");
+            if (stripeContainer) {
+                stripeContainer.style.display = 'none';
+            }
+            if (paypalContainer) {
+                paypalContainer.style.display = 'block';
+                const buttonContainer = document.getElementById('paypal-button-container');
+                if (buttonContainer && !buttonContainer.hasChildNodes()) {
+                    console.log("Initialisation du bouton PayPal");
+                    renderPayPalButton();
+                }
+            }
+        } else {
+            console.log("Affichage du mode Stripe");
+            if (paypalContainer) {
+                paypalContainer.style.display = 'none';
+            }
+            if (stripeContainer) {
+                stripeContainer.style.display = 'block';
+                const cardElement = document.getElementById('card-element');
+                if (cardElement && !cardElement.hasChildNodes()) {
+                    console.log("Initialisation du formulaire Stripe");
+                    initializeStripeForm();
+                }
+            }
+        }
+    }
+
+    // Fonction pour initialiser le formulaire Stripe
+    function initializeStripeForm() {
+        try {
+            console.log("Initialisation du formulaire Stripe...");
+            const elements = stripe.elements({
+                appearance: {
+                    theme: 'stripe',
+                    variables: {
+                        colorPrimary: '#a78b9f',
+                        colorBackground: '#ffffff',
+                        colorText: '#32325d',
+                        colorDanger: '#fa755a',
+                        fontFamily: '"Poppins", sans-serif',
+                        spacingUnit: '4px',
+                        borderRadius: '8px'
+                    }
+                }
+            });
+
+            const cardElement = elements.create('card', {
+                style: {
+                    base: {
+                        fontSize: '16px',
+                        color: '#32325d',
+                        fontFamily: '"Poppins", sans-serif',
+                        '::placeholder': {
+                            color: '#aab7c4'
+                        }
+                    },
+                    invalid: {
+                        color: '#fa755a',
+                        iconColor: '#fa755a'
+                    }
+                }
+            });
+
+            // Monter l'élément de carte
+            cardElement.mount('#card-element');
+            console.log("Élément de carte Stripe monté avec succès");
+
+            // Mettre à jour le montant affiché
+            const totalAmount = parseFloat(montantInput.value) + fraisLivraison;
+            document.getElementById('stripe-amount').textContent = formatCurrency(totalAmount);
+
+            // Gérer les erreurs de validation
+            cardElement.on('change', function(event) {
+                const displayError = document.getElementById('card-errors');
+                if (event.error) {
+                    displayError.textContent = event.error.message;
+                } else {
+                    displayError.textContent = '';
+                }
+            });
+
+            // Gérer la soumission du formulaire
+            const form = document.getElementById('card-form');
+            form.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                console.log("Tentative de soumission du formulaire Stripe...");
+
+                try {
+                    const {token, error} = await stripe.createToken(cardElement);
+
+                    if (error) {
+                        throw error;
+                    }
+
+                    console.log("Token Stripe créé avec succès, envoi au backend...");
+                    
+                    // Afficher un message de chargement
+                    const submitButton = form.querySelector('button[type="submit"]');
+                    const originalText = submitButton.textContent;
+                    submitButton.disabled = true;
+                    submitButton.textContent = "Traitement en cours...";
+
+                    try {
+                        const paymentData = {
+                            token: token.id,
+                            amount: Math.round((parseFloat(montantInput.value) + fraisLivraison) * 100), // Montant en centimes
+                            currency: 'eur',
+                            reference: referenceInput.value,
+                            tiktok: tiktokInput.value,
+                            customer: {
+                                name: `${prenomInput.value} ${nomInput.value}`,
+                                email: emailInput.value,
+                                phone: telephoneInput.value
+                            },
+                            shipping: {
+                                address: {
+                                    line1: adresseInput.value,
+                                    postal_code: codePostalInput.value,
+                                    city: villeInput.value,
+                                    country: paysInput.value
+                                }
+                            }
+                        };
+
+                        console.log("Envoi de la requête au backend:", {
+                            url: `${BACKEND_URL}${STRIPE_ENDPOINT}`,
+                            method: 'POST',
+                            data: paymentData
+                        });
+
+                        const response = await fetch(`${BACKEND_URL}${STRIPE_ENDPOINT}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'Origin': window.location.origin
+                            },
+                            body: JSON.stringify(paymentData)
+                        });
+
+                        console.log("Réponse du backend reçue:", {
+                            status: response.status,
+                            statusText: response.statusText,
+                            headers: Object.fromEntries(response.headers.entries())
+                        });
+
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error("Erreur détaillée du backend:", errorText);
+                            throw new Error(`Erreur HTTP: ${response.status} - ${errorText}`);
+                        }
+
+                        const result = await response.json();
+                        console.log("Réponse du backend:", result);
+
+                        if (result.success) {
+                            // Afficher la confirmation
+                            document.getElementById('conf-payer-name').textContent = `${prenomInput.value} ${nomInput.value}`;
+                            document.getElementById('conf-paypal-id').textContent = result.transactionId || 'Transaction Stripe';
+                            document.getElementById('conf-amount').textContent = formatCurrency(parseFloat(montantInput.value) + fraisLivraison);
+                            document.getElementById('conf-reference').textContent = referenceInput.value;
+                            document.getElementById('conf-tiktok').textContent = tiktokInput.value;
+                            
+                            // Masquer l'étape récap et afficher l'étape confirmation
+                            etapeRecap.style.display = 'none';
+                            etapeConfirmation.style.display = 'block';
+                            window.scrollTo(0, 0);
+
+                            // Enregistrer la commande dans Firestore
+                            saveOrderToFirestore(result.transactionId);
+                        } else {
+                            throw new Error(result.error || 'Erreur lors du traitement du paiement');
+                        }
+                    } catch (error) {
+                        console.error("Erreur lors de l'appel au backend:", error);
+                        const errorElement = document.getElementById('card-errors');
+                        errorElement.textContent = "Le serveur de paiement n'est pas accessible pour le moment. Veuillez réessayer dans quelques instants ou utiliser PayPal.";
+                        errorElement.style.color = 'red';
+                        errorElement.style.fontWeight = 'bold';
+                    } finally {
+                        // Restaurer le bouton
+                        submitButton.disabled = false;
+                        submitButton.textContent = originalText;
+                    }
+                } catch (error) {
+                    console.error("Erreur lors du traitement du paiement:", error);
+                    const errorElement = document.getElementById('card-errors');
+                    errorElement.textContent = error.message || "Une erreur est survenue lors du traitement du paiement.";
+                    errorElement.style.color = 'red';
+                }
+            });
+        } catch (error) {
+            console.error("Erreur lors de l'initialisation du formulaire Stripe:", error);
+            const errorElement = document.getElementById('card-errors');
+            errorElement.textContent = "Erreur lors de l'initialisation du formulaire de paiement. Veuillez réessayer.";
+        }
+    }
+
+    // Ajouter les écouteurs d'événements pour les boutons radio
+    document.querySelectorAll('input[name="modePaiement"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            console.log("Changement de mode de paiement détecté:", this.value);
+            gererAffichagePaiement();
+            updateSelectedPaiementLabel();
+        });
+    });
+
+    // Initialiser l'affichage au chargement
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log("DOM chargé, initialisation des modes de paiement");
+        const initialMode = document.querySelector('input[name="modePaiement"]:checked').value;
+        console.log("Mode initial:", initialMode);
+        gererAffichagePaiement();
+        updateSelectedPaiementLabel();
+    });
+
+    // Fonction pour sauvegarder la commande dans Firestore
+    function saveOrderToFirestore(transactionId) {
+        const commandeData = {
+            referenceArticle: referenceInput.value,
+            pseudoTikTok: tiktokInput.value,
+            montantArticle: parseFloat(montantInput.value),
+            prenom: prenomInput.value,
+            nom: nomInput.value,
+            email: emailInput.value,
+            telephone: telephoneInput.value,
+            adresse: adresseInput.value,
+            codePostal: codePostalInput.value,
+            ville: villeInput.value,
+            pays: paysInput.value,
+            modeLivraison: modeLivraisonSelectionne,
+            fraisLivraison: fraisLivraison,
+            montantTotalPaye: parseFloat(montantInput.value) + fraisLivraison,
+            devise: 'EUR',
+            userId: auth.currentUser ? auth.currentUser.uid : null,
+            stripeTransactionId: transactionId,
+            statutPaiement: 'COMPLETED',
+            dateCommande: serverTimestamp()
+        };
+
+        if (modeLivraisonSelectionne === "Mondial Relay" && selectedMondialRelayDetails) {
+            commandeData.pointRelais = {
+                id: selectedMondialRelayDetails.id || '',
+                nom: selectedMondialRelayDetails.nom || '',
+                adresse: selectedMondialRelayDetails.adresse || '',
+                codePostal: selectedMondialRelayDetails.codePostal || '',
+                ville: selectedMondialRelayDetails.ville || '',
+                pays: selectedMondialRelayDetails.pays || ''
+            };
+        }
+
+        db.collection("commandes").add(commandeData)
+            .then((docRef) => {
+                console.log("Commande enregistrée dans Firestore avec ID: ", docRef.id);
+            })
+            .catch((error) => {
+                console.error("Erreur lors de l'enregistrement dans Firestore: ", error);
+            });
+    }
+
+    // Suppression de l'appel à masquerPayPalButton qui n'existe plus
+    // masquerPayPalButton();
+
+    // Vérification HTTPS pour Stripe
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+        console.warn('Stripe.js doit être utilisé avec HTTPS en production');
+    }
+
+    // Met à jour la classe 'selected' sur les labels de choix de paiement
+    function updateSelectedPaiementLabel() {
+        const radios = document.querySelectorAll('#choix-paiement input[type="radio"]');
+        radios.forEach(radio => {
+            const label = radio.closest('label');
+            if (label) {
+                if (radio.checked) {
+                    label.classList.add('selected');
+                } else {
+                    label.classList.remove('selected');
+                }
+            }
+        });
+    }
+    choixPaiementRadios.forEach(radio => {
+        radio.addEventListener('change', updateSelectedPaiementLabel);
+    });
+    // Initialiser l'état visuel au chargement
+    updateSelectedPaiementLabel();
+  </script>
+</body>
+</html>
+
