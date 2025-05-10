@@ -9,33 +9,87 @@ app.use(cors());
 
 // Route pour créer une session de paiement
 app.post('/create-checkout-session', async (req, res) => {
+  console.log("Requête reçue sur /create-checkout-session avec le corps:", req.body);
   try {
-    const { amount, reference, tiktok } = req.body;
+    const { token, amount, currency, reference, tiktok, customer, shipping } = req.body;
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'eur',
-            product_data: {
-              name: `Commande Amirat Modestie - ${reference}`,
-              description: `Commande TikTok: ${tiktok}`,
-            },
-            unit_amount: Math.round(amount * 100), // Stripe utilise les centimes
-          },
-          quantity: 1,
+    // Valider que les données nécessaires sont présentes
+    if (!token || !amount || !currency || !customer || !customer.email || !shipping || !shipping.address) {
+      console.error("Validation échouée: Données de paiement manquantes ou invalides", req.body);
+      return res.status(400).json({ success: false, error: "Données de paiement manquantes ou invalides." });
+    }
+    
+    console.log("Validation des données d'entrée réussie. Tentative de création du PaymentIntent...");
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amount, // Montant en centimes, déjà calculé par le frontend
+      currency: currency,
+      payment_method_data: {
+        type: 'card',
+        card: {
+          token: token // L'ID du token reçu du frontend
+        }
+      },
+      confirm: true, // Tente de confirmer le paiement immédiatement
+      description: `Commande Amirat Modestie - ${reference || 'N/A'}`,
+      receipt_email: customer.email,
+      shipping: {
+        name: customer.name || `${shipping.address.city || 'N/A'}`, // Assurer un nom pour la livraison
+        address: {
+          line1: shipping.address.line1,
+          postal_code: shipping.address.postal_code,
+          city: shipping.address.city,
+          country: shipping.address.country
         },
-      ],
-      mode: 'payment',
-      success_url: `${req.headers.origin}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.origin}/cancel.html`,
+        phone: customer.phone || undefined // Optionnel
+      },
+      metadata: {
+        reference: reference || 'N/A',
+        tiktok: tiktok || 'N/A'
+      },
+      // Gère automatiquement la confirmation et les étapes 3DS si possible avec confirm:true
+      // Si une action est requise, le statut sera 'requires_action'
+      automatic_payment_methods: {
+        enabled: true,
+        allow_redirects: 'never' // Important pour les intégrations API directes
+      },
     });
 
-    res.json({ id: session.id });
+    if (paymentIntent.status === 'succeeded') {
+      res.json({
+        success: true,
+        transactionId: paymentIntent.id // L'ID du PaymentIntent
+      });
+    } else if (paymentIntent.status === 'requires_action' || paymentIntent.status === 'requires_payment_method') {
+      // Ce cas signifie qu'une authentification supplémentaire (comme 3D Secure) est requise
+      // ou que la méthode de paiement a été refusée.
+      // Votre frontend actuel (index.html) n'est pas configuré pour gérer stripe.confirmCardPayment()
+      // qui serait nécessaire ici avec le paymentIntent.client_secret.
+      // Pour l'instant, nous traitons cela comme un échec, mais avec plus de détails.
+      let specificError = 'Une action supplémentaire est requise par votre banque ou la méthode de paiement a été refusée.';
+      if (paymentIntent.last_payment_error && paymentIntent.last_payment_error.message) {
+        specificError = paymentIntent.last_payment_error.message;
+      }
+      res.status(400).json({
+        success: false,
+        error: specificError, // Assure qu'il y a toujours un message
+        requires_action: paymentIntent.status === 'requires_action', 
+        client_secret: paymentIntent.client_secret // Le client_secret serait utilisé par stripe.confirmCardPayment()
+      });
+    } else {
+      // Gérer les autres échecs
+      res.status(400).json({ success: false, error: 'Le paiement a échoué. Statut: ' + paymentIntent.status });
+    }
+
   } catch (error) {
-    console.error('Erreur:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Erreur Stripe Backend (bloc catch principal):', error);
+    let errorMessage = "Une erreur est survenue lors du traitement du paiement.";
+    if (error.type === 'StripeCardError') {
+      errorMessage = error.message; // Message d'erreur de Stripe plus spécifique
+    } else if (error.type === 'StripeInvalidRequestError') {
+      errorMessage = "Une erreur de configuration est survenue avec la requête de paiement.";
+    }
+    res.status(500).json({ success: false, error: errorMessage, stripeErrorType: error.type });
   }
 });
 
