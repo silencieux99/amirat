@@ -1706,6 +1706,50 @@
                 }
             });
 
+            // --- Payment Request Button (Apple Pay / Google Pay) ---
+            const totalAmount = parseFloat(montantInput.value) + fraisLivraison;
+            const paymentRequest = stripe.paymentRequest({
+                country: 'FR',
+                currency: 'eur',
+                total: {
+                    label: 'Total',
+                    amount: Math.round(totalAmount * 100),
+                },
+                requestPayerName: true,
+                requestPayerEmail: true,
+            });
+            const prButton = elements.create('paymentRequestButton', {
+                paymentRequest: paymentRequest,
+                style: {
+                    paymentRequestButton: {
+                        type: 'default',
+                        theme: 'dark',
+                        height: '44px',
+                    }
+                }
+            });
+            paymentRequest.canMakePayment().then(function(result) {
+                if (result) {
+                    let prBtnDiv = document.getElementById('payment-request-button');
+                    if (!prBtnDiv) {
+                        prBtnDiv = document.createElement('div');
+                        prBtnDiv.id = 'payment-request-button';
+                        const container = document.getElementById('stripe-payment-container');
+                        container.insertBefore(prBtnDiv, container.firstChild);
+                    }
+                    prButton.mount('#payment-request-button');
+                } else {
+                    // Le bouton ne s'affichera pas si le navigateur ne supporte pas Apple Pay/Google Pay
+                    console.log('Apple Pay/Google Pay non disponible sur ce navigateur');
+                }
+            });
+            paymentRequest.on('paymentmethod', async (ev) => {
+                // Affiche un message ou gère le paiement ici (voir doc Stripe pour intégration complète)
+                // Pour une vraie intégration, il faut créer un PaymentIntent côté serveur et le confirmer ici
+                alert('Paiement express détecté ! Cette intégration nécessite un backend compatible PaymentIntent.');
+                ev.complete('fail');
+            });
+
             const cardElement = elements.create('card', {
                 style: {
                     base: {
@@ -1728,7 +1772,7 @@
             console.log("Élément de carte Stripe monté avec succès");
 
             // Mettre à jour le montant affiché
-            const totalAmount = parseFloat(montantInput.value) + fraisLivraison;
+            // totalAmount déjà déclaré plus haut pour le Payment Request Button
             document.getElementById('stripe-amount').textContent = formatCurrency(totalAmount);
 
             // Gérer les erreurs de validation
