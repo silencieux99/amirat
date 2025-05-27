@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commandes en Temps Réel - Admin</title>
+    <!-- Polices Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <!-- SDK Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #6a4f6b;
+            --secondary-color: #a78b9f;
+            --background-color: #f8f9fa;
+            --text-color: #343a40;
+            --card-bg: #ffffff;
+            --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            --border-radius: 8px;
+        }
+
+        body {
+            font-family: 'Lato', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            font-weight: 500;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+
+        h1 {
+            font-family: 'Poppins', sans-serif;
+            color: var(--primary-color);
+            text-align: center;
+            font-size: 1.8em;
+            margin-bottom: 30px;
+        }
+
+        #orders-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .order-card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+            padding: 18px 20px;
+            border-left: 4px solid var(--primary-color);
+            transition: box-shadow 0.3s ease;
+            margin-bottom: 15px;
+        }
+
+        .order-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+
+        .order-card h2 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.2em;
+            color: var(--primary-color);
+            margin-top: 0;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .order-card p {
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .order-card strong {
+            font-weight: 600;
+            color: var(--text-color);
+        }
+        
+        .order-card .order-id {
+            font-size: 0.8em;
+            color: #777;
+            margin-top:10px;
+            display: block;
+        }
+
+        #no-orders-message {
+            text-align: center;
+            font-size: 1.1em;
+            color: #7f8c8d;
+            padding: 30px;
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+        }
+         /* Style pour le bouton de retour */
+        .back-button-container {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .btn-back {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.9em;
+            font-weight: 500;
+            cursor: pointer;
+            background-color: var(--secondary-color);
+            color: white;
+            text-decoration: none;
+            transition: background-color 0.3s ease;
+        }
+        .btn-back:hover {
+            background-color: var(--primary-color);
+        }
+
+        /* Styles pour la modale de détails */
+        .modal {
+            display: none; /* Caché par défaut */
+            position: fixed; 
+            z-index: 1001; 
+            left: 0;
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.6); 
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto; 
+            padding: 25px;
+            border: 1px solid #888;
+            width: 80%; 
+            max-width: 600px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .close-button {
+            color: #aaa;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+        }
+        .modal-content h3 {
+            font-family: 'Poppins', sans-serif;
+            color: var(--primary-color);
+            margin-top: 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .detail-item {
+            display: flex;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+        .detail-item strong {
+            flex-basis: 150px;
+            min-width: 150px;
+            margin-right: 10px;
+            color: var(--text-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="back-button-container">
+            <a href="admin.html" class="btn-back">&larr; Retour au Panel Admin</a>
+        </div>
+        <h1>Commandes</h1>
+
+        <div id="orders-list">
+            <!-- Les commandes s'afficheront ici -->
+        </div>
+        <p id="no-orders-message" style="display:none;">Aucune commande pour le moment. En attente de nouvelles commandes...</p>
+    </div>
+
+    <!-- Modale pour les détails de la commande -->
+    <div id="orderDetailsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h3>Détails de la Commande</h3>
+            <div id="modalOrderDetailsContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration Firebase ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyD8JFpOoAYcOdavqDkLnzDqjFxRl8P_RE0",
+            authDomain: "amirat-3a58d.firebaseapp.com",
+            projectId: "amirat-3a58d",
+            storageBucket: "amirat-3a58d.firebasestorage.app",
+            messagingSenderId: "307977965766",
+            appId: "1:307977965766:web:c670f287860646de4087c7",
+            measurementId: "G-6WPLCESCRX"
+        };
+
+        // Initialiser Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const auth = firebase.auth(); // Utilisé pour vérifier si l'admin est connecté
+
+        // Références DOM
+        const ordersListDiv = document.getElementById('orders-list');
+        const noOrdersMessage = document.getElementById('no-orders-message');
+        let displayedOrderIds = new Set();
+        const orderDetailsModal = document.getElementById('orderDetailsModal');
+        const modalOrderDetailsContent = document.getElementById('modalOrderDetailsContent');
+        const closeModalButton = document.querySelector('.modal .close-button');
+
+        let allFetchedOrders = []; // Réintroduire pour stocker et trier toutes les commandes
+
+        // --- Fonction Helper pour déterminer le mode de paiement ---
+        function getPaymentMethod(commande) {
+            if (commande.stripeTransactionId) {
+                return 'Stripe';
+            } else if (commande.paypalTransactionId) {
+                return 'PayPal';
+            }
+            return 'Inconnu';
+        }
+
+        function robustDateSort(a, b) {
+            // Logique de tri robuste que nous avions définie
+            const valA = a.order.dateCommande;
+            const valB = b.order.dateCommande;
+            let timeA, timeB;
+
+            if (valA && typeof valA.toDate === 'function') { timeA = valA.toDate().getTime(); }
+            else if (valA instanceof Date) { timeA = valA.getTime(); }
+            else { timeA = null; }
+
+            if (valB && typeof valB.toDate === 'function') { timeB = valB.toDate().getTime(); }
+            else if (valB instanceof Date) { timeB = valB.getTime(); }
+            else { timeB = null; }
+
+            if (timeA === null && timeB === null) return 0;
+            if (timeA === null) return 1; // nulls/invalides à la fin pour A
+            if (timeB === null) return -1; // nulls/invalides à la fin pour B (donc A avant B)
+            return timeB - timeA; // Tri décroissant (plus récent en premier)
+        }
+
+        function renderAllOrders() {
+            ordersListDiv.innerHTML = '';
+            displayedOrderIds.clear();
+
+            if (allFetchedOrders.length === 0) {
+                noOrdersMessage.style.display = 'block';
+                return;
+            }
+            noOrdersMessage.style.display = 'none';
+
+            // Pour que l'affichage soit [plus récent en haut, ..., plus ancien en bas]
+            // et que displayOrder() utilise insertBefore(card, ordersListDiv.firstChild)
+            // nous devons parcourir la liste triée (plus récent en premier) en sens inverse.
+            const reversedOrderForDisplay = [...allFetchedOrders].reverse(); 
+            reversedOrderForDisplay.forEach(item => {
+                displayOrder(item.order, item.orderId);
+            });
+        }
+
+        function displayOrder(orderData, orderId) {
+            if (displayedOrderIds.has(orderId)) return; // Déjà affiché
+
+            const card = document.createElement('div');
+            card.classList.add('order-card');
+            card.dataset.id = orderId; // Stocker l'ID pour le clic
+            card._orderData = orderData; // Rendre les données de la commande accessibles pour le clic
+
+            let dateCommande = 'Date inconnue';
+            if (orderData.dateCommande && orderData.dateCommande.toDate) {
+                try {
+                    dateCommande = orderData.dateCommande.toDate().toLocaleString('fr-FR', {
+                        day: '2-digit', month: '2-digit', year: 'numeric', 
+                        hour: '2-digit', minute: '2-digit'
+                    });
+                } catch (e) {
+                    console.warn("Date invalide pour commande", orderId, orderData.dateCommande);
+                }
+            }
+            
+            const clientNom = `${orderData.prenom || ''} ${orderData.nom || ''}`.trim() || 'Client inconnu';
+            const total = orderData.montantTotalPaye ? orderData.montantTotalPaye.toFixed(2) + ' ' + (orderData.devise || 'EUR') : 'N/A';
+
+            card.innerHTML = `
+                <h2>Commande: ${orderData.referenceArticle || 'Référence inconnue'}</h2>
+                <p><strong>Client:</strong> ${clientNom} (${orderData.pseudoTikTok || '-'})</p>
+                <p><strong>Email:</strong> ${orderData.email || orderData.paypalPayerEmail || 'Non fourni'}</p>
+                <p><strong>Montant:</strong> ${total}</p>
+                <p><strong>Date:</strong> ${dateCommande}</p>
+                <p><strong>Mode de Paiement:</strong> ${getPaymentMethod(orderData)}</p>
+                <p><strong>Statut:</strong> ${orderData.statutPaiement || orderData.statutPaiementPayPal || 'N/A'}</p>
+                <span class="order-id">ID: ${orderId}</span>
+            `;
+
+            ordersListDiv.insertBefore(card, ordersListDiv.firstChild);
+            displayedOrderIds.add(orderId);
+            noOrdersMessage.style.display = 'none';
+        }
+
+        function openOrderDetailsModal(orderData, orderId) {
+            const createDetailItem = (label, value) => {
+                const val = value !== undefined && value !== null && value !== '' ? value : '-';
+                return `<div class="detail-item"><strong>${label}:</strong> <span>${val}</span></div>`;
+            };
+
+            const formattedDate = orderData.dateCommande && orderData.dateCommande.toDate ? 
+                               orderData.dateCommande.toDate().toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
+
+            let detailsHtml = `
+                ${createDetailItem('ID Commande', orderId)}
+                ${createDetailItem('Référence Article', orderData.referenceArticle)}
+                ${createDetailItem('Pseudo TikTok', orderData.pseudoTikTok)}
+                ${createDetailItem('Date', formattedDate)}
+                <hr style="margin: 10px 0;">
+                ${createDetailItem('Prénom', orderData.prenom)}
+                ${createDetailItem('Nom', orderData.nom)}
+                ${createDetailItem('Email', orderData.email || orderData.paypalPayerEmail)}
+                ${createDetailItem('Téléphone', orderData.telephone)}
+                <hr style="margin: 10px 0;">
+                ${createDetailItem('Adresse', orderData.adresse)}
+                ${createDetailItem('Code Postal', orderData.codePostal)}
+                ${createDetailItem('Ville', orderData.ville)}
+                ${createDetailItem('Pays', orderData.pays)}
+            `;
+
+            if (orderData.modeLivraison === 'Mondial Relay' && orderData.pointRelais) {
+                detailsHtml += `
+                    <hr style="margin: 10px 0;">
+                    <strong>Point Relais Mondial Relay:</strong><br>
+                    ${createDetailItem('ID Relais', orderData.pointRelais.id)}
+                    ${createDetailItem('Nom Relais', orderData.pointRelais.nom)}
+                    ${createDetailItem('Adresse Relais', `${orderData.pointRelais.adresse || ''}, ${orderData.pointRelais.codePostal || ''} ${orderData.pointRelais.ville || ''}`)}
+                `;
+            }
+
+            detailsHtml += `
+                <hr style="margin: 10px 0;">
+                ${createDetailItem('Mode Livraison', orderData.modeLivraison)}
+                ${createDetailItem('Frais Livraison', orderData.fraisLivraison ? orderData.fraisLivraison.toFixed(2) + ' ' + (orderData.devise || 'EUR') : '-')}
+                ${createDetailItem('Montant Article', orderData.montantArticle ? orderData.montantArticle.toFixed(2) + ' ' + (orderData.devise || 'EUR') : '-')}
+                ${createDetailItem('Montant Total Payé', orderData.montantTotalPaye ? '<strong>' + orderData.montantTotalPaye.toFixed(2) + ' ' + (orderData.devise || 'EUR') + '</strong>' : '-')}
+                <hr style="margin: 10px 0;">
+                ${createDetailItem('Mode de Paiement', getPaymentMethod(orderData))}
+                ${createDetailItem('Statut Paiement', orderData.statutPaiement || orderData.statutPaiementPayPal || 'N/A')}
+            `;
+
+            if (orderData.stripeTransactionId) {
+                detailsHtml += createDetailItem('ID Transaction Stripe', orderData.stripeTransactionId);
+            }
+            if (orderData.paypalTransactionId) {
+                detailsHtml += createDetailItem('ID Transaction PayPal', orderData.paypalTransactionId);
+                if (orderData.paypalPayerNom) {
+                    detailsHtml += createDetailItem('Nom Payeur PayPal', orderData.paypalPayerNom);
+                }
+                if (orderData.paypalPayerEmail) {
+                    detailsHtml += createDetailItem('Email Payeur PayPal', orderData.paypalPayerEmail);
+                }
+            }
+
+            modalOrderDetailsContent.innerHTML = detailsHtml;
+            orderDetailsModal.style.display = 'block';
+        }
+
+        function listenToOrders() {
+            let firstSnapshotProcessed = false; 
+            ordersListDiv.innerHTML = ''; 
+            displayedOrderIds.clear(); 
+            noOrdersMessage.style.display = 'none'; 
+
+            db.collection('commandes')
+              .orderBy('dateCommande', 'desc') // On garde au cas où Firestore s'en sortirait un jour
+              .onSnapshot(snapshot => {
+                  if (!firstSnapshotProcessed) {
+                      console.log(`Chargement initial: ${snapshot.docs.length} commandes trouvées.`);
+                      allFetchedOrders = snapshot.docs.map(doc => ({ order: doc.data(), orderId: doc.id }));
+                      allFetchedOrders.sort(robustDateSort); // Trier après récupération
+                      
+                      console.log("Ordre APRÈS TRI JS ROBUSTE (chargement initial):");
+                      allFetchedOrders.slice(0, 5).forEach(item => console.log(item.orderId, item.order.dateCommande?.toDate()));
+                      
+                      renderAllOrders();
+                      firstSnapshotProcessed = true;
+                      return; 
+                  }
+
+                  let listChanged = false;
+                  snapshot.docChanges().forEach(change => {
+                      const orderId = change.doc.id;
+                      if (change.type === 'added') {
+                          const orderData = change.doc.data();
+                          if (!allFetchedOrders.some(item => item.orderId === orderId)) {
+                              console.log('Nouvelle commande détectée:', orderId);
+                              allFetchedOrders.push({ order: orderData, orderId: orderId }); // Ajouter, puis on retrie
+                              listChanged = true;
+                          }
+                      } else if (change.type === 'modified') {
+                          console.log('Commande modifiée:', orderId);
+                          const index = allFetchedOrders.findIndex(item => item.orderId === orderId);
+                          if (index > -1) {
+                              allFetchedOrders[index].order = change.doc.data();
+                              listChanged = true;
+                          }
+                      } else if (change.type === 'removed') {
+                          console.log('Commande supprimée:', orderId);
+                          const initialLength = allFetchedOrders.length;
+                          allFetchedOrders = allFetchedOrders.filter(item => item.orderId !== orderId);
+                          if (allFetchedOrders.length !== initialLength) {
+                            listChanged = true;
+                          }
+                      }
+                  });
+
+                  if (listChanged) {
+                      allFetchedOrders.sort(robustDateSort); // Toujours re-trier si la liste a changé
+                      console.log("Ordre APRÈS TRI JS ROBUSTE (mise à jour):");
+                      allFetchedOrders.slice(0, 5).forEach(item => console.log(item.orderId, item.order.dateCommande?.toDate()));
+                      renderAllOrders(); 
+                  }
+              }, error => {
+                  console.error("Erreur d'écoute Firestore: ", error);
+                  noOrdersMessage.textContent = "Erreur lors du chargement des commandes.";
+                  noOrdersMessage.style.display = 'block';
+              });
+        }
+
+        auth.onAuthStateChanged(user => {
+            if (user && user.uid === 'TcFXI1vqTWPL7CXGmiKJ3pKTMTt2') { 
+                console.log("Admin connecté, affichage des commandes.");
+                listenToOrders();
+            } else {
+                console.log("Utilisateur non admin ou déconnecté.");
+                document.body.innerHTML = '<div style="text-align:center; padding:50px; font-size:1.2em;">Accès réservé aux administrateurs. Veuillez vous connecter via le <a href="admin.html">panel admin</a>.</div>';
+            }
+        });
+
+        // Écouteur de clic pour les cartes de commande
+        ordersListDiv.addEventListener('click', function(event) {
+            const card = event.target.closest('.order-card');
+            if (card && card._orderData && card.dataset.id) { // Vérifier card._orderData et card.dataset.id
+                openOrderDetailsModal(card._orderData, card.dataset.id); // Utiliser card.dataset.id
+            }
+        });
+
+        // Fermer la modale
+        closeModalButton.addEventListener('click', function() {
+            orderDetailsModal.style.display = 'none';
+        });
+        window.addEventListener('click', function(event) {
+            if (event.target == orderDetailsModal) {
+                orderDetailsModal.style.display = 'none';
+            }
+        });
+
+    </script>
+</body>
+</html> 

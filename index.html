@@ -679,6 +679,7 @@
         <a href="mes-commandes.html" style="color: var(--primary-color); font-weight: 500; text-decoration: none; display: block; margin-bottom: 5px;">
             Mes Commandes
         </a>
+        <a href="contact.html" style="color: var(--primary-color); font-weight: 500; text-decoration: none; display: block; margin-bottom: 5px;">Contactez-nous</a>
         <span style="font-size: 0.9em; color: var(--text-light);">
             Retrouvez-nous sur TikTok :
             <a href="https://www.tiktok.com/@amiratmodestie?_t=ZN-8w3eDnlsiGc&_r=1" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); font-weight: 500; text-decoration: none;">
@@ -946,6 +947,7 @@
       </div>
   </div>
 
+  
   <script>
     // --- Initialisation Firebase ---
     const firebaseConfig = {
@@ -1630,7 +1632,7 @@
     // --- Intégration Stripe et gestion du choix de paiement ---
     // Initialisation de Stripe (UNE SEULE FOIS)
     const BACKEND_URL = 'https://amirat-backend.onrender.com';
-    const STRIPE_ENDPOINT = '/stripe/create-payment-intent';
+    const STRIPE_ENDPOINT = '/create-checkout-session';
     
     // Initialisation unique de Stripe
     let stripe;
@@ -1803,38 +1805,84 @@
                             statusText: response.statusText,
                             headers: Object.fromEntries(response.headers.entries())
                         });
-
-                        if (!response.ok) {
-                            const errorText = await response.text();
-                            console.error("Erreur détaillée du backend:", errorText);
-                            throw new Error(`Erreur HTTP: ${response.status} - ${errorText}`);
+                        
+                        // Tentative de toujours lire le corps JSON pour avoir plus de détails
+                        let responseData;
+                        try {
+                            responseData = await response.json();
+                        } catch (jsonError) {
+                            // Si le corps n'est pas du JSON (ex: erreur 500 HTML), créer un objet d'erreur
+                            console.error("Impossible de parser la réponse JSON du backend:", jsonError);
+                            const rawText = await response.text(); // Tenter de lire en texte brut
+                            throw new Error(`Réponse non-JSON du serveur (Statut ${response.status}): ${rawText || 'Aucun corps de réponse'}`);
                         }
 
-                        const result = await response.json();
-                        console.log("Réponse du backend:", result);
+                        if (!response.ok) { // Gère les statuts HTTP 4xx, 5xx
+                            if (response.status === 400 && responseData.requires_action && responseData.client_secret) {
+                                console.log("Action supplémentaire requise par Stripe. Tentative de confirmation côté client...");
+                                
+                                const { error: confirmationError, paymentIntent } = await stripe.confirmCardPayment(
+                                    responseData.client_secret
+                                );
 
-                        if (result.success) {
-                            // Afficher la confirmation
-                            document.getElementById('conf-payer-name').textContent = `${prenomInput.value} ${nomInput.value}`;
-                            document.getElementById('conf-paypal-id').textContent = result.transactionId || 'Transaction Stripe';
-                            document.getElementById('conf-amount').textContent = formatCurrency(parseFloat(montantInput.value) + fraisLivraison);
-                            document.getElementById('conf-reference').textContent = referenceInput.value;
-                            document.getElementById('conf-tiktok').textContent = tiktokInput.value;
-                            
-                            // Masquer l'étape récap et afficher l'étape confirmation
-                            etapeRecap.style.display = 'none';
-                            etapeConfirmation.style.display = 'block';
-                            window.scrollTo(0, 0);
+                                if (confirmationError) {
+                                    console.error("Erreur lors de la confirmation 3DS/SCA:", confirmationError);
+                                    throw new Error(confirmationError.message || "Échec de l'authentification supplémentaire.");
+                                }
 
-                            // Enregistrer la commande dans Firestore
-                            saveOrderToFirestore(result.transactionId);
-                        } else {
-                            throw new Error(result.error || 'Erreur lors du traitement du paiement');
+                                if (paymentIntent && paymentIntent.status === 'succeeded') {
+                                    console.log("Paiement confirmé avec succès après SCA:", paymentIntent);
+                                    document.getElementById('conf-payer-name').textContent = `${prenomInput.value} ${nomInput.value}`;
+                                    document.getElementById('conf-paypal-id').textContent = paymentIntent.id || 'Transaction Stripe';
+                                    document.getElementById('conf-amount').textContent = formatCurrency(parseFloat(montantInput.value) + fraisLivraison);
+                                    document.getElementById('conf-reference').textContent = referenceInput.value;
+                                    document.getElementById('conf-tiktok').textContent = tiktokInput.value;
+                                    
+                                    etapeRecap.style.display = 'none';
+                                    etapeConfirmation.style.display = 'block';
+                                    window.scrollTo(0, 0);
+                                    console.log("Interface de confirmation mise à jour après SCA.");
+
+                                    await saveOrderToFirestore(paymentIntent.id);
+                                    console.log("Enregistrement Firestore terminé après SCA.");
+                                } else {
+                                    console.error("Échec du paiement après tentative de confirmation SCA. Statut:", paymentIntent ? paymentIntent.status : 'Inconnu');
+                                    throw new Error("Le paiement n'a pas pu être confirmé après l'étape d'authentification. Statut: " + (paymentIntent ? paymentIntent.status : 'Inconnu'));
+                                }
+                            } else {
+                                // Autres erreurs HTTP (500, 401, 404, ou 400 sans action requise spécifique)
+                                const errorMsg = responseData.error || `Erreur HTTP non gérée: ${response.status}`;
+                                console.error("Erreur détaillée du backend (non-SCA):", responseData);
+                                throw new Error(errorMsg);
+                            }
+                        } else { // response.ok est true (HTTP 200-299)
+                            console.log("Réponse du backend (HTTP 200-299):", responseData);
+                            if (responseData.success) { // Succès direct du paiement
+                                console.log("Paiement Stripe réussi directement. Transaction ID:", responseData.transactionId);
+                                document.getElementById('conf-payer-name').textContent = `${prenomInput.value} ${nomInput.value}`;
+                                document.getElementById('conf-paypal-id').textContent = responseData.transactionId || 'Transaction Stripe';
+                                document.getElementById('conf-amount').textContent = formatCurrency(parseFloat(montantInput.value) + fraisLivraison);
+                                document.getElementById('conf-reference').textContent = referenceInput.value;
+                                document.getElementById('conf-tiktok').textContent = tiktokInput.value;
+                                
+                                etapeRecap.style.display = 'none';
+                                etapeConfirmation.style.display = 'block';
+                                window.scrollTo(0, 0);
+                                console.log("Interface de confirmation mise à jour (succès direct).");
+
+                                await saveOrderToFirestore(responseData.transactionId);
+                                console.log("Enregistrement Firestore terminé (succès direct).");
+                            } else {
+                                // HTTP 200 mais success: false dans la réponse (ne devrait pas arriver avec la logique serveur actuelle pour les erreurs)
+                                console.error("Le backend (HTTP 200) a indiqué un échec de paiement:", responseData.error);
+                                throw new Error(responseData.error || 'Erreur de paiement inattendue signalée par le backend.');
+                            }
                         }
                     } catch (error) {
-                        console.error("Erreur lors de l'appel au backend:", error);
+                        console.error("Erreur lors de l'appel au backend ou de la confirmation SCA:", error);
                         const errorElement = document.getElementById('card-errors');
-                        errorElement.textContent = "Le serveur de paiement n'est pas accessible pour le moment. Veuillez réessayer dans quelques instants ou utiliser PayPal.";
+                        // Utiliser error.message qui devrait contenir le message d'erreur le plus pertinent
+                        errorElement.textContent = error.message || "Une erreur est survenue lors du traitement du paiement. Veuillez réessayer.";
                         errorElement.style.color = 'red';
                         errorElement.style.fontWeight = 'bold';
                     } finally {
@@ -1875,8 +1923,9 @@
     });
 
     // Fonction pour sauvegarder la commande dans Firestore
-    function saveOrderToFirestore(transactionId) {
+    async function saveOrderToFirestore(transactionId) { // Ajout de async
         const commandeData = {
+            // ... (votre objet commandeData actuel reste ici)
             referenceArticle: referenceInput.value,
             pseudoTikTok: tiktokInput.value,
             montantArticle: parseFloat(montantInput.value),
@@ -1893,8 +1942,8 @@
             montantTotalPaye: parseFloat(montantInput.value) + fraisLivraison,
             devise: 'EUR',
             userId: auth.currentUser ? auth.currentUser.uid : null,
-            stripeTransactionId: transactionId,
-            statutPaiement: 'COMPLETED',
+            stripeTransactionId: transactionId, // C'est bien d'avoir un champ spécifique pour Stripe
+            statutPaiement: 'COMPLETED', // Assurez-vous que c'est le bon statut
             dateCommande: serverTimestamp()
         };
 
@@ -1909,12 +1958,17 @@
             };
         }
 
-        db.collection("commandes").add(commandeData)
+        console.log("Données à enregistrer dans Firestore:", commandeData); // Log existant, c'est bien
+
+        // Retourner la promesse
+        return db.collection("commandes").add(commandeData)
             .then((docRef) => {
                 console.log("Commande enregistrée dans Firestore avec ID: ", docRef.id);
+                // Vous pouvez retourner docRef si nécessaire pour une utilisation ultérieure
             })
             .catch((error) => {
                 console.error("Erreur lors de l'enregistrement dans Firestore: ", error);
+                throw error; // Relancer l'erreur pour qu'elle soit attrapée par le bloc appelant
             });
     }
 

@@ -679,6 +679,18 @@
                 padding: 10px;
                 font-size: 0.9em;
             }
+
+            /* Amélioration pour les détails de commande sur mobile */
+            .detail-item {
+                flex-direction: column; /* Empile le libellé et la valeur */
+                align-items: flex-start; /* Aligne les éléments au début */
+            }
+            .detail-item strong {
+                flex-basis: auto; /* Réinitialise la base de flexibilité */
+                min-width: 0; /* Réinitialise la largeur minimale */
+                margin-right: 0; /* Supprime la marge à droite */
+                margin-bottom: 4px; /* Ajoute un petit espace sous le libellé */
+            }
         }
 
         /* Animations */
@@ -700,8 +712,9 @@
         </div>
         <ul class="menu-items">
             <li data-page="dashboard" class="active">Tableau de bord</li>
-            <li data-page="orders">Commandes</li>
             <li data-page="users">Utilisateurs</li>
+            <li data-page="export-commandes">Export Commandes</li>
+            <li data-page="commandes-live">Commandes en direct</li>
             <li data-page="settings">Paramètres</li>
         </ul>
     </div>
@@ -959,6 +972,16 @@
         // Variable pour stocker la date du filtre actuel
         let currentFilterDate = null;
 
+        // --- Fonction Helper pour déterminer le mode de paiement ---
+        function getPaymentMethod(commande) {
+            if (commande.stripeTransactionId) {
+                return 'Stripe';
+            } else if (commande.paypalTransactionId) {
+                return 'PayPal';
+            }
+            return 'Inconnu';
+        }
+
         // --- Fonction pour afficher la LISTE des commandes ---
         async function fetchAndDisplayOrders(filterDate = null) {
             loadingMessage.classList.remove('hidden');
@@ -1045,6 +1068,7 @@
                         ${formattedDate}<br>
                         <strong>${commande.referenceArticle || 'Ref Inconnue'}</strong> - 
                         ${commande.prenom || ''} ${commande.nom || ''} (${commande.pseudoTikTok || '-'}) <br>
+                        <span style="font-size: 0.8em; color: #444;">Mode de paiement: ${getPaymentMethod(commande)}</span><br>
                         <span class="order-list-id">ID: ${commandeId}</span>
                     `;
 
@@ -1133,12 +1157,13 @@
                     ${createDetailItem('Mode Livraison', commande.modeLivraison)}
                 </div>
                  <div class="detail-section">
-                    <h3>Détails Paiement PayPal</h3>
-                    ${createDetailItem('Statut Paiement', commande.statutPaiementPayPal)}
-                    ${createDetailItem('ID Transaction', commande.paypalTransactionId)}
-                    ${createDetailItem('Nom Payeur', commande.paypalPayerNom)}
-                    ${createDetailItem('Email Payeur', commande.paypalPayerEmail)}
-                    ${createDetailItem('ID Payeur', commande.paypalPayerId)}
+                    <h3>Détails Paiement / Transaction</h3>
+                    ${createDetailItem('Mode de Paiement', getPaymentMethod(commande))}
+                    ${createDetailItem('Statut Paiement', commande.statutPaiement || commande.statutPaiementPayPal || 'N/A')}
+                    ${createDetailItem('ID Transaction', commande.stripeTransactionId || commande.paypalTransactionId || 'N/A')}
+                    ${commande.paypalPayerNom ? createDetailItem('Nom Payeur PayPal', commande.paypalPayerNom) : ''}
+                    ${commande.paypalPayerEmail ? createDetailItem('Email Payeur PayPal', commande.paypalPayerEmail) : ''}
+                    ${commande.paypalPayerId ? createDetailItem('ID Payeur PayPal', commande.paypalPayerId) : ''}
                 </div>
             `;
 
@@ -1288,6 +1313,7 @@
                         <strong>${formattedTime}</strong> - 
                         ${commande.referenceArticle || 'Ref Inconnue'} - 
                         ${commande.prenom || ''} ${commande.nom || ''} (${commande.pseudoTikTok || '-'}) <br>
+                        <span style="font-size: 0.8em; color: #444;">Mode de paiement: ${getPaymentMethod(commande)}</span><br>
                         <span class="order-list-id">ID: ${commandeId}</span>
                     `;
                     
@@ -1609,6 +1635,28 @@
                     }
                 });
                 
+                // Gérer la redirection pour export-commandes
+                if (pageName === 'export-commandes') {
+                    window.location.href = 'export-commandes.html';
+                    // Optionnel: Fermer le menu si ouvert sur mobile, bien que la page va changer
+                    if (window.innerWidth <= 768) {
+                        menuToggle.classList.remove('active');
+                        menuHamburger.classList.remove('active');
+                        mainContent.classList.remove('menu-active');
+                    }
+                    return; // Arrêter l'exécution pour éviter d'autres logiques de page
+                }
+                 // Gérer la redirection pour commandes-live
+                if (pageName === 'commandes-live') {
+                    window.location.href = 'commandes-live.html';
+                    if (window.innerWidth <= 768) {
+                        menuToggle.classList.remove('active');
+                        menuHamburger.classList.remove('active');
+                        mainContent.classList.remove('menu-active');
+                    }
+                    return;
+                }
+                
                 // Si on est sur mobile, fermer le menu après sélection
                 if (window.innerWidth <= 768) {
                     menuToggle.classList.remove('active');
@@ -1619,12 +1667,11 @@
                 // Charger les données spécifiques à la page si nécessaire
                 if (pageName === 'dashboard') {
                     loadDashboardData();
-                } else if (pageName === 'orders') {
-                    // Utiliser notre fonction qui affiche les commandes du jour et active la vue par jour
-                    loadOrdersPageWithTodayData();
                 } else if (pageName === 'users') {
                     loadUsersData();
                 }
+                // Pas besoin de charger des données spécifiques pour 'settings' ou 'export-commandes' ici
+                // car 'export-commandes' est géré par une redirection.
             });
         });
         
@@ -1768,7 +1815,10 @@
                                     ${order.montantTotalPaye ? order.montantTotalPaye.toFixed(2) + ' €' : '-'}
                                 </div>
                                 <div style="font-size: 0.8em; color: #666; margin-top: 3px;">
-                                    ${order.statutPaiementPayPal || 'Statut inconnu'}
+                                    Statut: ${order.statutPaiement || order.statutPaiementPayPal || 'Inconnu'}
+                                </div>
+                                <div style="font-size: 0.8em; color: #666; margin-top: 3px;">
+                                    Payé via: ${getPaymentMethod(order)}
                                 </div>
                             </div>
                         </div>

@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Commandes pour Mondial Relay - Admin</title>
+    <!-- Polices Google Fonts (optionnel, pour le style) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- SDK Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script> <!-- Si authentification admin -->
+
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px 12px;
+            text-align: left;
+            font-size: 0.95em;
+        }
+        th {
+            background-color: #e9ecef;
+            font-weight: 600;
+            color: #495057;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        tr:hover {
+            background-color: #e9ecef;
+        }
+        .checkbox-cell, .action-cell {
+            text-align: center;
+        }
+        input[type="checkbox"] {
+            transform: scale(1.2);
+            cursor: pointer;
+        }
+        .button-container {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            background-color: #3498db; /* Bleu */
+            color: white;
+        }
+        .btn:hover {
+            background-color: #2980b9;
+        }
+        .btn:active {
+            transform: scale(0.98);
+        }
+        .btn-secondary {
+            background-color: #7f8c8d; /* Gris */
+        }
+        .btn-secondary:hover {
+            background-color: #6c7a7d;
+        }
+        #loading-message, #no-orders-message {
+            text-align: center;
+            font-size: 1.1em;
+            color: #7f8c8d;
+            padding: 20px;
+        }
+        .info-point-relais {
+            font-size: 0.85em;
+            color: #555;
+            display: block;
+            margin-top: 3px;
+        }
+
+        /* Styles pour la responsivité */
+        .table-container {
+            overflow-x: auto; /* Permet le défilement horizontal de la table sur mobile */
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .button-container {
+                text-align: center; /* Centrer les boutons sur mobile */
+            }
+            .btn {
+                display: block; /* Boutons pleine largeur */
+                width: 100%;
+                margin-bottom: 10px; /* Espace entre les boutons empilés */
+            }
+            .btn:last-child {
+                margin-bottom: 0;
+            }
+            .btn-secondary {
+                margin-right: 0 !important; /* Annuler la marge spécifique pour les boutons secondaires */
+            }
+            th, td {
+                padding: 8px 10px; /* Padding un peu réduit pour les cellules */
+                font-size: 0.9em; /* Taille de police légèrement réduite */
+            }
+            h1 {
+                font-size: 1.5em; /* Titre plus petit sur mobile */
+            }
+        }
+        @media (max-width: 480px) {
+            th, td {
+                font-size: 0.85em; /* Encore plus petit pour très petits écrans */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Export Commandes pour Étiquettes Mondial Relay</h1>
+
+        <div class="button-container">
+            <button id="selectAllButton" class="btn btn-secondary" style="margin-right: 10px;">Tout Sélectionner</button>
+            <button id="deselectAllButton" class="btn btn-secondary" style="margin-right: 10px;">Tout Désélectionner</button>
+            <button id="exportCsvButton" class="btn">Exporter en CSV</button>
+        </div>
+
+        <p id="loading-message">Chargement des commandes...</p>
+        <p id="no-orders-message" style="display:none;">Aucune commande trouvée.</p>
+        
+        <div class="pagination-controls" style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <label for="itemsPerPage" style="margin-right: 5px;">Afficher:</label>
+                <select id="itemsPerPage" class="btn" style="width: auto; display: inline-block; padding: 8px 12px; height: auto; line-height: 1;">
+                    <option value="20">20</option>
+                    <option value="50" selected>50</option>
+                    <option value="100">100</option>
+                    <option value="all">Tous</option>
+                </select>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button id="prevPageButton" class="btn btn-secondary" style="width: auto; display: inline-block;">Précédent</button>
+                <span id="pageInfo">Page 1 / 1</span>
+                <button id="nextPageButton" class="btn btn-secondary" style="width: auto; display: inline-block;">Suivant</button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table id="ordersTable" style="display:none;">
+                <thead>
+                    <tr>
+                        <th class="checkbox-cell"><input type="checkbox" id="selectAllHeaderCheckbox" title="Sélectionner toutes les commandes affichées"></th>
+                        <th>Date Commande</th>
+                        <th>Référence Article</th>
+                        <th>Client</th>
+                        <th>Mode Livraison</th>
+                        <th>Email</th>
+                        <th>Téléphone</th>
+                        <th>Destination</th> <!-- Adresse client ou Point Relais -->
+                    </tr>
+                </thead>
+                <tbody id="ordersTableBody">
+                    <!-- Les lignes de commandes seront injectées ici par JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration Firebase (Copiez votre config ici) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyD8JFpOoAYcOdavqDkLnzDqjFxRl8P_RE0", // VOTRE CONFIG
+            authDomain: "amirat-3a58d.firebaseapp.com",       // VOTRE CONFIG
+            projectId: "amirat-3a58d",                       // VOTRE CONFIG
+            storageBucket: "amirat-3a58d.firebasestorage.app", // VOTRE CONFIG
+            messagingSenderId: "307977965766",               // VOTRE CONFIG
+            appId: "1:307977965766:web:c670f287860646de4087c7", // VOTRE CONFIG
+            measurementId: "G-6WPLCESCRX"                    // VOTRE CONFIG (si utilisé)
+        };
+
+        // Initialiser Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const auth = firebase.auth(); // Si vous avez une authentification admin
+
+        // TODO: Mettre en place une règle de sécurité sur Firestore pour que seul un admin puisse lire toutes les commandes.
+        // Pour l'instant, on suppose que l'accès est ouvert ou que vous vous connecterez en tant qu'admin.
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const ordersTable = document.getElementById('ordersTable');
+            const ordersTableBody = document.getElementById('ordersTableBody');
+            const loadingMessage = document.getElementById('loading-message');
+            const noOrdersMessage = document.getElementById('no-orders-message');
+            const exportCsvButton = document.getElementById('exportCsvButton');
+            const selectAllButton = document.getElementById('selectAllButton');
+            const deselectAllButton = document.getElementById('deselectAllButton');
+            const selectAllHeaderCheckbox = document.getElementById('selectAllHeaderCheckbox');
+
+            // Variables pour la pagination
+            let allFetchedOrders = [];
+            let currentPage = 1;
+            let itemsPerPage = 50; // Valeur par défaut, correspond au select HTML
+
+            const itemsPerPageSelect = document.getElementById('itemsPerPage');
+            const prevPageButton = document.getElementById('prevPageButton');
+            const nextPageButton = document.getElementById('nextPageButton');
+            const pageInfo = document.getElementById('pageInfo');
+
+            function updatePaginationControls() {
+                const totalPages = itemsPerPage === 'all' ? 1 : Math.ceil(allFetchedOrders.length / parseInt(itemsPerPage));
+                pageInfo.textContent = `Page ${currentPage} / ${totalPages}`;
+                prevPageButton.disabled = currentPage === 1;
+                nextPageButton.disabled = currentPage === totalPages || totalPages === 0;
+
+                // Gérer l'état des boutons si aucune commande
+                if (allFetchedOrders.length === 0) {
+                    itemsPerPageSelect.disabled = true;
+                    prevPageButton.disabled = true;
+                    nextPageButton.disabled = true;
+                    pageInfo.textContent = 'Page 0 / 0';
+                } else {
+                    itemsPerPageSelect.disabled = false;
+                }
+            }
+
+            function renderTablePage() {
+                ordersTableBody.innerHTML = ''; // Vider le tableau
+                selectAllHeaderCheckbox.checked = false; // Décocher par défaut
+
+                if (allFetchedOrders.length === 0) {
+                    ordersTable.style.display = 'none';
+                    noOrdersMessage.style.display = 'block';
+                    loadingMessage.style.display = 'none';
+                    updatePaginationControls(); // Mettre à jour même si vide
+                    return;
+                }
+                
+                ordersTable.style.display = ''; // Afficher la table
+                noOrdersMessage.style.display = 'none';
+                loadingMessage.style.display = 'none';
+
+                const start = itemsPerPage === 'all' ? 0 : (currentPage - 1) * parseInt(itemsPerPage);
+                const end = itemsPerPage === 'all' ? allFetchedOrders.length : start + parseInt(itemsPerPage);
+                const ordersToDisplay = allFetchedOrders.slice(start, end);
+
+                ordersToDisplay.forEach(orderData => {
+                    const { order, orderId } = orderData; // Déstructurer pour obtenir order et orderId
+                    const tr = document.createElement('tr');
+
+                    const dateCommande = order.dateCommande && order.dateCommande.toDate ? 
+                                       order.dateCommande.toDate().toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit', year:'numeric'}) + ' ' + order.dateCommande.toDate().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : 
+                                       'Date inconnue';
+                    
+                    let destinationText = '';
+                    if (order.modeLivraison === 'Mondial Relay' && order.pointRelais) {
+                        destinationText = `Point Relais: ${order.pointRelais.nom || ''} - ${order.pointRelais.adresse || ''}, ${order.pointRelais.codePostal || ''} ${order.pointRelais.ville || ''}`;
+                    } else if (order.modeLivraison === 'Retrait sur place') {
+                        destinationText = 'Retrait sur place';
+                    } else { // Adresse de livraison directe
+                        destinationText = `${order.adresse || ''}, ${order.codePostal || ''} ${order.ville || ''}, ${order.pays || ''}`;
+                    }
+
+                    const tdCheckbox = document.createElement('td');
+                    tdCheckbox.classList.add('checkbox-cell');
+                    const checkboxInput = document.createElement('input');
+                    checkboxInput.type = 'checkbox';
+                    checkboxInput.classList.add('order-checkbox');
+                    checkboxInput.dataset.orderId = orderId;
+                    checkboxInput._orderData = order; 
+                    tdCheckbox.appendChild(checkboxInput);
+
+                    const tdDate = document.createElement('td');
+                    tdDate.textContent = dateCommande;
+
+                    const tdRef = document.createElement('td');
+                    tdRef.textContent = order.referenceArticle || '-';
+
+                    const tdClient = document.createElement('td');
+                    tdClient.textContent = `${order.prenom || ''} ${order.nom || ''}`.trim();
+
+                    const tdModeLivraison = document.createElement('td');
+                    tdModeLivraison.textContent = order.modeLivraison || '-';
+
+                    const tdEmail = document.createElement('td');
+                    tdEmail.textContent = order.email || '-';
+
+                    const tdTel = document.createElement('td');
+                    tdTel.textContent = order.telephone || '-';
+
+                    const tdDestination = document.createElement('td');
+                    if (order.modeLivraison === 'Mondial Relay' && order.pointRelais) {
+                        tdDestination.innerHTML = `<strong>Point Relais:</strong> ${order.pointRelais.nom || ''}<br><span class="info-point-relais">${order.pointRelais.adresse || ''}, ${order.pointRelais.codePostal || ''} ${order.pointRelais.ville || ''}</span>`;
+                    } else {
+                        tdDestination.textContent = destinationText;
+                    }
+
+                    tr.appendChild(tdCheckbox);
+                    tr.appendChild(tdDate);
+                    tr.appendChild(tdRef);
+                    tr.appendChild(tdClient);
+                    tr.appendChild(tdModeLivraison);
+                    tr.appendChild(tdEmail);
+                    tr.appendChild(tdTel);
+                    tr.appendChild(tdDestination);
+                    ordersTableBody.appendChild(tr);
+                });
+                updatePaginationControls();
+            }
+
+            async function fetchAndDisplayOrders() {
+                try {
+                    loadingMessage.style.display = 'block';
+                    ordersTable.style.display = 'none';
+                    noOrdersMessage.style.display = 'none';
+                    // Désactiver les contrôles pendant le chargement
+                    exportCsvButton.disabled = true;
+                    selectAllButton.disabled = true;
+                    deselectAllButton.disabled = true;
+                    selectAllHeaderCheckbox.disabled = true;
+                    itemsPerPageSelect.disabled = true;
+                    prevPageButton.disabled = true;
+                    nextPageButton.disabled = true;
+
+                    const ordersSnapshot = await db.collection('commandes')
+                                                 .orderBy('dateCommande', 'desc')
+                                                 .get();
+                    
+                    allFetchedOrders = []; // Réinitialiser
+                    if (!ordersSnapshot.empty) {
+                        ordersSnapshot.forEach(doc => {
+                            allFetchedOrders.push({ order: doc.data(), orderId: doc.id });
+                        });
+                    }
+
+                    currentPage = 1; // Réinitialiser à la première page après un nouveau fetch
+                    itemsPerPage = itemsPerPageSelect.value; // Lire la valeur actuelle du select
+
+                    renderTablePage(); // Afficher la première page ou le message "aucune commande"
+
+                    // Réactiver les boutons généraux si des commandes existent
+                    if (allFetchedOrders.length > 0) {
+                        exportCsvButton.disabled = false;
+                        selectAllButton.disabled = false;
+                        deselectAllButton.disabled = false;
+                        selectAllHeaderCheckbox.disabled = false;
+                    }
+
+                } catch (error) {
+                    console.error("Erreur lors du chargement des commandes: ", error);
+                    loadingMessage.style.display = 'none';
+                    noOrdersMessage.textContent = 'Erreur lors du chargement des commandes.';
+                    noOrdersMessage.style.display = 'block';
+                    allFetchedOrders = []; // S'assurer que c'est vide en cas d'erreur
+                    renderTablePage(); // Pour mettre à jour les contrôles de pagination
+                }
+            }
+
+            // Écouteurs d'événements pour la pagination
+            itemsPerPageSelect.addEventListener('change', (event) => {
+                itemsPerPage = event.target.value;
+                currentPage = 1; // Retour à la première page
+                renderTablePage();
+            });
+
+            prevPageButton.addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderTablePage();
+                }
+            });
+
+            nextPageButton.addEventListener('click', () => {
+                const totalPages = itemsPerPage === 'all' ? 1 : Math.ceil(allFetchedOrders.length / parseInt(itemsPerPage));
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderTablePage();
+                }
+            });
+
+            // Mettre à jour la logique de selectAllHeaderCheckbox
+            selectAllHeaderCheckbox.addEventListener('change', function() {
+                const checkboxes = ordersTableBody.querySelectorAll('.order-checkbox');
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = this.checked;
+                });
+            });
+
+            // Modifier les boutons Tout Sélectionner / Désélectionner pour la page actuelle
+            selectAllButton.addEventListener('click', () => {
+                const checkboxes = ordersTableBody.querySelectorAll('.order-checkbox');
+                checkboxes.forEach(checkbox => checkbox.checked = true);
+                selectAllHeaderCheckbox.checked = true;
+            });
+
+            deselectAllButton.addEventListener('click', () => {
+                const checkboxes = ordersTableBody.querySelectorAll('.order-checkbox');
+                checkboxes.forEach(checkbox => checkbox.checked = false);
+                selectAllHeaderCheckbox.checked = false;
+            });
+
+            function getSelectedOrdersData() {
+                const selectedData = [];
+                const checkboxes = document.querySelectorAll('.order-checkbox:checked');
+                checkboxes.forEach(checkbox => {
+                    if (checkbox._orderData) {
+                        selectedData.push(checkbox._orderData);
+                    }
+                });
+                return selectedData;
+            }
+
+            function convertToCSV(dataArray) {
+                if (!dataArray || dataArray.length === 0) {
+                    return '';
+                }
+
+                const headers = [
+                    "MR_Civilité", "MR_Nom", "MR_Prénom", 
+                    "MR_Adresse1_Dest", "MR_Adresse2_Dest", "MR_CP_Dest", "MR_Ville_Dest", "MR_Pays_Dest_ISO",
+                    "MR_Mail_Dest", "MR_Tel_Dest", 
+                    "MR_Poids_Colis_Grammes", "MR_ID_PointRelais_Dest",
+                    "Commentaire_Commande_Ref",
+                ];
+                
+                const csvRows = [headers.join(';')];
+
+                dataArray.forEach(order => {
+                    const civilite = ""; 
+                    const nom = order.nom || "";
+                    const prenom = order.prenom || "";
+                    
+                    let adr1 = "", adr2 = "", cp = "", ville = "", paysISO = "", idPointRelais = "";
+
+                    if (order.modeLivraison === 'Mondial Relay' && order.pointRelais) {
+                        const pointRelaisAdresse = (order.pointRelais.adresse || "").split('\n');
+                        adr1 = pointRelaisAdresse[0] || "";
+                        adr2 = pointRelaisAdresse.slice(1).join(' ') || "";
+                        cp = order.pointRelais.codePostal || "";
+                        ville = order.pointRelais.ville || "";
+                        paysISO = (order.pointRelais.pays || "FR").substring(0,2).toUpperCase();
+                        idPointRelais = order.pointRelais.id || "";
+                    } else {
+                        return; // Ne pas inclure dans le CSV si ce n'est pas pour Mondial Relay avec point relais
+                    }
+
+                    const emailDest = order.email || "";
+                    const telDest = (order.telephone || "").replace(/[^0-9+]/g, '');
+                    const poidsGrammes = "500"; 
+                    const commentaireRef = order.referenceArticle || "";
+
+                    const escapeCsvField = (field) => {
+                        if (typeof field !== 'string') field = String(field);
+                        if (/[\"\n\r;]/.test(field)) { // Modifié pour inclure le point-virgule dans les caractères à échapper
+                            return '"' + field.replace(/"/g, '""') + '"';
+                        }
+                        return field;
+                    };
+                    
+                    const row = [
+                        civilite, nom, prenom,
+                        adr1, adr2, cp, ville, paysISO,
+                        emailDest, telDest,
+                        poidsGrammes, idPointRelais,
+                        commentaireRef
+                    ].map(escapeCsvField);
+                    csvRows.push(row.join(';'));
+                });
+
+                return csvRows.join('\r\n');
+            }
+
+            function downloadCSV(csvString, filename) {
+                const blob = new Blob(["\uFEFF" + csvString], { type: 'text/csv;charset=utf-8;' }); // Ajout BOM pour Excel
+                const link = document.createElement('a');
+                if (link.download !== undefined) {
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', filename);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                } else {
+                    alert("Votre navigateur ne supporte pas le téléchargement direct. Veuillez copier le contenu CSV.");
+                }
+            }
+
+            exportCsvButton.addEventListener('click', () => {
+                const selectedOrders = getSelectedOrdersData();
+                if (selectedOrders.length === 0) {
+                    alert("Veuillez sélectionner au moins une commande à exporter.");
+                    return;
+                }
+                
+                const commandesMondialRelay = selectedOrders.filter(order => order.modeLivraison === 'Mondial Relay' && order.pointRelais);
+
+                if (commandesMondialRelay.length === 0) {
+                    alert("Aucune des commandes sélectionnées n'est une livraison Mondial Relay avec un point relais défini.");
+                    return;
+                }
+
+                const csvData = convertToCSV(commandesMondialRelay);
+                if (csvData && csvData.split('\r\n').length > 1) { // Vérifier si plus que juste les entêtes
+                    downloadCSV(csvData, 'export_mondial_relay.csv');
+                } else {
+                    alert("Aucune donnée à exporter après filtrage (ou seulement les en-têtes).");
+                }
+            });
+
+            fetchAndDisplayOrders();
+        });
+    </script>
+</body>
+</html> 

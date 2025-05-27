@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contactez-nous - Amirat Modestie</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #FFF0F5;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+    .page-container {
+      max-width: 650px;
+      margin: 40px auto;
+      padding: 15px;
+    }
+    .card {
+      background-color: #fff;
+      padding: 25px 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+      margin-bottom: 25px;
+    }
+    h1, h2 {
+      color: #a78b9f;
+      text-align: center;
+      font-weight: 600;
+      margin-top: 0;
+    }
+    h1 {
+      font-size: 2em;
+      margin-bottom: 35px;
+    }
+    h2 {
+      font-size: 1.4em;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #e0dce1;
+      padding-bottom: 10px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+      position: relative;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #555;
+      font-size: 0.95em;
+    }
+    input[type="text"], input[type="email"], textarea {
+      width: 100%;
+      padding: 12px 15px;
+      border: 1px solid #e0dce1;
+      border-radius: 5px;
+      box-sizing: border-box;
+      font-size: 1em;
+      font-family: 'Poppins', sans-serif;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    input[type="date"] {
+      width: 100%;
+      padding: 12px 15px;
+      border: 1px solid #e0dce1;
+      border-radius: 5px;
+      box-sizing: border-box;
+      font-size: 1em;
+      font-family: 'Poppins', sans-serif;
+      background: #fff url('https://img.icons8.com/ios-filled/24/cccccc/calendar.png') no-repeat right 12px center/20px 20px;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      appearance: none;
+    }
+    input[type="date"]::-webkit-input-placeholder { color: #aaa; }
+    input[type="date"]:focus {
+      border-color: #a78b9f;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(167, 139, 159, 0.2);
+    }
+    input:focus, textarea:focus {
+      border-color: #a78b9f;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(167, 139, 159, 0.2);
+    }
+    .btn {
+      padding: 12px 25px;
+      border: none;
+      border-radius: 5px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 1em;
+      font-weight: 500;
+      cursor: pointer;
+      background-color: #a78b9f;
+      color: #fff;
+      transition: background-color 0.3s ease, transform 0.1s ease;
+      text-align: center;
+    }
+    .btn:hover {
+      background-color: #93708a;
+    }
+    #contact-success {
+      color: green;
+      display: none;
+      margin-top: 10px;
+    }
+    #contact-error {
+      color: red;
+      display: none;
+      margin-top: 10px;
+    }
+    .logo-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .logo-container img {
+      max-width: 150px;
+      height: auto;
+    }
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-bottom: 25px;
+      color: #a78b9f;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+    @media (max-width: 600px) {
+      .page-container {
+        padding: 5px;
+      }
+      .card {
+        padding: 15px 5px;
+      }
+      .form-group label {
+        font-size: 1em;
+      }
+      input, textarea {
+        font-size: 1em;
+        padding: 12px 10px;
+      }
+      input[type="date"] {
+        background-size: 18px 18px;
+        padding-right: 36px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-container">
+    <div class="logo-container">
+      <a href="index.html"><img src="https://i.ibb.co/ymD4j0Y5/d64d95d9-3237-444f-b385-ccf91a50afec-removebg-preview.png" alt="Logo Amirat Modestie"></a>
+    </div>
+    <a href="index.html" class="back-link">&larr; Retour à l'accueil</a>
+    <div class="card" id="contact-section">
+      <h2>Contactez-nous</h2>
+      <form id="contact-form">
+        <div class="form-group">
+          <label for="contact-name">Nom</label>
+          <input type="text" id="contact-name" name="name" required>
+        </div>
+        <div class="form-group">
+          <label for="contact-email">Email</label>
+          <input type="email" id="contact-email" name="email" required>
+        </div>
+        <div class="form-group">
+          <label for="contact-tiktok">Pseudo TikTok (optionnel)</label>
+          <input type="text" id="contact-tiktok" name="tiktok" placeholder="Votre pseudo TikTok">
+        </div>
+        <div class="form-group">
+          <label for="contact-reference">Référence de commande (optionnel)</label>
+          <input type="text" id="contact-reference" name="reference" placeholder="Exemple : 120">
+        </div>
+        <div class="form-group">
+          <label for="contact-date">Date de commande (optionnel)</label>
+          <input type="date" id="contact-date" name="date" placeholder="jj/mm/aaaa">
+        </div>
+        <div class="form-group">
+          <label for="contact-message">Message</label>
+          <textarea id="contact-message" name="message" rows="5" required></textarea>
+        </div>
+        <button type="submit" class="btn">Envoyer</button>
+        <div id="contact-success">Votre message a bien été envoyé !</div>
+        <div id="contact-error">Une erreur est survenue. Veuillez réessayer.</div>
+      </form>
+    </div>
+  </div>
+  <script>
+    document.getElementById('contact-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const name = document.getElementById('contact-name').value;
+      const email = document.getElementById('contact-email').value;
+      const tiktok = document.getElementById('contact-tiktok').value;
+      const reference = document.getElementById('contact-reference').value;
+      const date = document.getElementById('contact-date').value;
+      const message = document.getElementById('contact-message').value;
+      const successDiv = document.getElementById('contact-success');
+      const errorDiv = document.getElementById('contact-error');
+      successDiv.style.display = 'none';
+      errorDiv.style.display = 'none';
+      try {
+        const response = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, tiktok, reference, date, message })
+        });
+        if (response.ok) {
+          successDiv.style.display = 'block';
+          document.getElementById('contact-form').reset();
+        } else {
+          errorDiv.style.display = 'block';
+        }
+      } catch (err) {
+        errorDiv.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html> 

@@ -1,11 +1,15 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const nodemailer = require('nodemailer');
+const path = require('path');
 const app = express();
 
 // Middleware
 app.use(express.json());
 app.use(cors());
+app.use(express.static(path.join(__dirname)));
 
 // Route pour créer une session de paiement
 app.post('/create-checkout-session', async (req, res) => {
@@ -100,6 +104,49 @@ app.get('/check-payment-status/:sessionId', async (req, res) => {
     res.json({ status: session.payment_status });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// === ROUTE DE CONTACT ===
+
+// Configurez votre transporteur SMTP ici (exemple avec Gmail, à adapter selon votre fournisseur)
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST, // ex: 'smtp.gmail.com'
+  port: process.env.SMTP_PORT || 465,
+  secure: true, // true pour 465, false pour 587
+  auth: {
+    user: process.env.SMTP_USER, // votre email
+    pass: process.env.SMTP_PASS  // votre mot de passe ou app password
+  }
+});
+
+app.post('/api/contact', async (req, res) => {
+  const { name, email, tiktok, reference, date, message } = req.body;
+  if (!name || !email || !message) {
+    return res.status(400).json({ error: 'Tous les champs obligatoires sont requis.' });
+  }
+  try {
+    let infosOptionnelles = '';
+    if (tiktok) infosOptionnelles += `Pseudo TikTok : ${tiktok}\n`;
+    if (reference) infosOptionnelles += `Référence de commande : ${reference}\n`;
+    if (date) infosOptionnelles += `Date de commande : ${date}\n`;
+    await transporter.sendMail({
+      from: `"Contact Amirat" <${process.env.SMTP_USER}>`,
+      to: 'contact@amirat-modestie.fr',
+      subject: `Nouveau message de contact de ${name}`,
+      replyTo: email,
+      text: `Nom: ${name}\nEmail: ${email}\n${infosOptionnelles}\nMessage:\n${message}`
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erreur envoi mail contact:', err);
+    if (err && err.response) {
+      console.error('Réponse SMTP:', err.response);
+    }
+    if (err && err.code) {
+      console.error('Code erreur SMTP:', err.code);
+    }
+    res.status(500).json({ error: 'Erreur lors de l\'envoi du message.' });
   }
 });
 
