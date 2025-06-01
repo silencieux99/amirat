@@ -646,7 +646,7 @@ function updateMondialRelayLabel() {
     const paysValue = paysInput ? paysInput.value : 'France';
     const labelMR = document.querySelector('label[for="livraison_mondial_relay"] .shipping-cost');
     if (labelMR) {
-        if (paysValue === 'France') {
+        if (paysValue.trim().toLowerCase() === 'france') {
             labelMR.textContent = '5,90 €';
         } else {
             labelMR.textContent = '6,90 €';
@@ -659,6 +659,14 @@ if (typeof paysInput !== 'undefined' && paysInput) {
     paysInput.addEventListener('change', function() {
         updateShippingCost();
         updateMondialRelayLabel();
+    });
+}
+// Ajoute aussi l'écouteur sur le mode de livraison
+if (typeof livraisonRadios !== 'undefined' && livraisonRadios) {
+    livraisonRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            updateMondialRelayLabel();
+        });
     });
 }
 // Mettre à jour aussi au chargement
@@ -764,6 +772,11 @@ updateMondialRelayLabel();
            <option value="Belgique">Belgique</option>
            <option value="Luxembourg">Luxembourg</option>
            <option value="Suisse">Suisse</option>
+           <option value="Espagne">Espagne</option>
+           <option value="Italie">Italie</option>
+           <option value="Allemagne">Allemagne</option>
+           <option value="Pays-Bas">Pays-Bas</option>
+           <option value="Portugal">Portugal</option>
            <!-- Ajouter d'autres pays si nécessaire -->
          </select>
        </div>
@@ -1592,7 +1605,7 @@ updateMondialRelayLabel();
                             if (displaySelectedMondialRelayInfo) {
                                 displaySelectedMondialRelayInfo.innerHTML = 
                                     `<strong>${selectedMondialRelayDetails.nom}</strong><br>
-                                     ${selectedMondialRelayDetails.adresse}<br>
+                                                                         ${selectedMondialRelayDetails.adresse}<br>
                                      ${selectedMondialRelayDetails.codePostal} ${selectedMondialRelayDetails.ville}`;
                             }
                             if (mondialRelayWidgetModal) mondialRelayWidgetModal.style.display = 'none';
