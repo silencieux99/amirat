@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Permissions-Policy" content="unload=()">
   <title>Paiement - Amirat Modestie</title>
   <!-- Polices Google Fonts -->
@@ -645,6 +645,7 @@
 function updateMondialRelayLabel() {
     const paysValue = paysInput ? paysInput.value : 'France';
     const labelMR = document.querySelector('label[for="livraison_mondial_relay"] .shipping-cost');
+    // Correction : on force l'affichage du bon prix même si le radio n'est pas sélectionné
     if (labelMR) {
         if (paysValue.trim().toLowerCase() === 'france') {
             labelMR.textContent = '5,90 €';
@@ -652,16 +653,24 @@ function updateMondialRelayLabel() {
             labelMR.textContent = '6,90 €';
         }
     }
+    // Correction : on met aussi à jour l'attribut data-cost du radio Mondial Relay
+    const radioMR = document.getElementById('livraison_mondial_relay');
+    if (radioMR) {
+        if (paysValue.trim().toLowerCase() === 'france') {
+            radioMR.setAttribute('data-cost', '5.90');
+        } else {
+            radioMR.setAttribute('data-cost', '6.90');
+        }
+    }
 }
 
 // Ajoute l'écouteur sur le select pays pour mettre à jour le label et le coût
 if (typeof paysInput !== 'undefined' && paysInput) {
     paysInput.addEventListener('change', function() {
-        updateShippingCost();
         updateMondialRelayLabel();
+        updateShippingCost();
     });
 }
-// Ajoute aussi l'écouteur sur le mode de livraison
 if (typeof livraisonRadios !== 'undefined' && livraisonRadios) {
     livraisonRadios.forEach(radio => {
         radio.addEventListener('change', function() {
@@ -669,8 +678,16 @@ if (typeof livraisonRadios !== 'undefined' && livraisonRadios) {
         });
     });
 }
-// Mettre à jour aussi au chargement
-updateMondialRelayLabel();
+// Correction : forcer la mise à jour du label à chaque fois qu'on affiche l'étape livraison
+function afficherEtape(etapeToShow) {
+    // ...existing code...
+    if (etapeToShow === 2) {
+        etapeLivraison.style.display = 'block';
+        updateMondialRelayLabel(); // <-- Ajout ici pour forcer la mise à jour
+    }
+    // ...existing code...
+}
+// ...existing code...
   </script>
 
   <!-- Scripts externes requis pour Mondial Relay (placés dans le head ou avant la fin du body) -->
@@ -1076,6 +1093,7 @@ updateMondialRelayLabel();
         etapeArticle.style.display = 'block';
       } else if (etapeToShow === 2) {
         etapeLivraison.style.display = 'block';
+        updateMondialRelayLabel(); // <-- Ajout ici pour forcer la mise à jour
       } else if (etapeToShow === 3) {
         etapeCompte.style.display = 'block';
         // Gérer l'affichage interne de l'étape compte (choix/login/register/logged-in)
