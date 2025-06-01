@@ -638,21 +638,32 @@
         background: var(--button-hover-bg);
     }
 
-    @media (max-width: 768px) {
-        #stripe-payment-container {
-            padding: 15px;
-        }
-        
-        #card-element {
-            padding: 10px;
-        }
-        
-        #card-form button[type="submit"] {
-            padding: 10px;
-            font-size: 14px;
+  </style>
+
+  <script>
+    // Fonction utilitaire pour mettre à jour le texte du label Mondial Relay
+function updateMondialRelayLabel() {
+    const paysValue = paysInput ? paysInput.value : 'France';
+    const labelMR = document.querySelector('label[for="livraison_mondial_relay"] .shipping-cost');
+    if (labelMR) {
+        if (paysValue === 'France') {
+            labelMR.textContent = '5,90 €';
+        } else {
+            labelMR.textContent = '6,90 €';
         }
     }
-  </style>
+}
+
+// Ajoute l'écouteur sur le select pays pour mettre à jour le label et le coût
+if (typeof paysInput !== 'undefined' && paysInput) {
+    paysInput.addEventListener('change', function() {
+        updateShippingCost();
+        updateMondialRelayLabel();
+    });
+}
+// Mettre à jour aussi au chargement
+updateMondialRelayLabel();
+  </script>
 
   <!-- Scripts externes requis pour Mondial Relay (placés dans le head ou avant la fin du body) -->
   <!-- 1. jQuery (bibliothèque JavaScript) -->
@@ -1092,42 +1103,39 @@
     function updateShippingCost() {
         const selectedRadio = document.querySelector('input[name="modeDeLivraison"]:checked');
         const mondialRelayDetailsContainer = document.querySelector('.mondial-relay-details-container');
-
-        console.log("updateShippingCost appelée."); 
-        console.log("selectedRadio:", selectedRadio); 
-        console.log("mondialRelayDetailsContainer:", mondialRelayDetailsContainer); 
+        const paysValue = paysInput ? paysInput.value : 'France'; // Récupère le pays sélectionné
 
         if (selectedRadio) {
-            fraisLivraison = parseFloat(selectedRadio.dataset.cost) || 0;
+            // Par défaut, on prend le data-cost du radio
+            let cost = parseFloat(selectedRadio.dataset.cost) || 0;
             modeLivraisonSelectionne = selectedRadio.value;
-            console.log("Mode livraison choisi:", modeLivraisonSelectionne, "Coût:", fraisLivraison); 
 
+            // Si Mondial Relay, ajuster selon le pays
             if (modeLivraisonSelectionne === "Mondial Relay") {
-                console.log("Option Mondial Relay sélectionnée."); 
+                if (paysValue === 'France') {
+                    cost = 5.90;
+                } else {
+                    cost = 6.90;
+                }
                 if (mondialRelayDetailsContainer) {
                     mondialRelayDetailsContainer.style.display = 'block';
-                    console.log("mondialRelayDetailsContainer affiché."); 
-                } else {
-                    console.error("mondialRelayDetailsContainer est NULL, ne peut pas l'afficher !"); 
                 }
             } else {
-                console.log("Autre option de livraison sélectionnée, ou pas Mondial Relay."); 
                 if (mondialRelayDetailsContainer) {
                     mondialRelayDetailsContainer.style.display = 'none';
-                    console.log("mondialRelayDetailsContainer caché."); 
-                } else {
-                    console.error("mondialRelayDetailsContainer est NULL (dans le else), ne peut pas le cacher !"); 
                 }
             }
+            fraisLivraison = cost;
         } else {
-            console.warn("Aucun mode de livraison sélectionné (selectedRadio est null)."); 
-            fraisLivraison = 0; 
+            fraisLivraison = 0;
             modeLivraisonSelectionne = '';
             if (mondialRelayDetailsContainer) {
                 mondialRelayDetailsContainer.style.display = 'none';
-                console.log("mondialRelayDetailsContainer caché (aucun mode sélectionné)."); 
             }
         }
+
+        // Mettre à jour le label Mondial Relay dans le récap aussi
+        updateMondialRelayLabel();
 
         // Mettre à jour le récap si l'étape récap est visible
         if (etapeRecap && etapeRecap.style.display === 'block') {
